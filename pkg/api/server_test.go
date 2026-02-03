@@ -120,8 +120,8 @@ func TestCreatePod(t *testing.T) {
 	if pods[0].Spec.Name != "test" {
 		t.Errorf("got pod name %q, want %q", pods[0].Spec.Name, "test")
 	}
-	if pods[0].Status != types.StatusPending {
-		t.Errorf("got status %q, want %q", pods[0].Status, types.StatusPending)
+	if pods[0].Status != types.PodStatusPending {
+		t.Errorf("got status %q, want %q", pods[0].Status, types.PodStatusPending)
 	}
 }
 

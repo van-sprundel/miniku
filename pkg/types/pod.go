@@ -10,10 +10,10 @@ type PodSpec struct {
 type PodStatus string
 
 const (
-	StatusPending PodStatus = "Pending"
-	StatusRunning PodStatus = "Running"
-	StatusFailed  PodStatus = "Failed"
-	StatusUnknown PodStatus = "Unknown"
+	PodStatusPending PodStatus = "Pending"
+	PodStatusRunning PodStatus = "Running"
+	PodStatusFailed  PodStatus = "Failed"
+	PodStatusUnknown PodStatus = "Unknown"
 )
 
 type Pod struct {
@@ -24,5 +24,5 @@ type Pod struct {
 }
 
 func NewPod(Spec PodSpec) Pod {
-	return Pod{Spec: Spec, Status: StatusPending}
+	return Pod{Spec: Spec, Status: PodStatusPending}
 }
