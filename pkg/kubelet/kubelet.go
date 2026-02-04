@@ -9,12 +9,12 @@ import (
 	"time"
 )
 
-const POLL_INTERVAL_MS = 5000
+const POLL_INTERVAL = time.Millisecond * 5000
 
 const MAX_RETRY_COUNT = 3
 
-const BASE_DELAY_MS time.Duration = 1000
-const MAX_DELAY_MS time.Duration = 60_000
+const BASE_DELAY time.Duration = 1000
+const MAX_DELAY time.Duration = 60_000
 
 type Kubelet struct {
 	name    string
@@ -83,7 +83,7 @@ func (k *Kubelet) Run() {
 		}
 
 		// polling
-		time.Sleep(time.Millisecond * POLL_INTERVAL_MS)
+		time.Sleep(POLL_INTERVAL)
 	}
 }
 
@@ -175,6 +175,6 @@ func (k *Kubelet) handleMissingContainer(pod types.Pod) types.Pod {
 }
 
 func calculateNextRetry(pod types.Pod) time.Time {
-	delay := min(MAX_DELAY_MS, BASE_DELAY_MS*time.Duration(1<<pod.RetryCount))
+	delay := min(MAX_DELAY, BASE_DELAY*time.Duration(1<<pod.RetryCount))
 	return time.Now().Add(delay)
 }

@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const POLL_INTERVAL_MS = 5000
+const POLL_INTERVAL = time.Millisecond * 5000
 
 type ReplicaSetController struct {
 	podStore store.PodStore
@@ -39,7 +39,7 @@ func (c *ReplicaSetController) Run() {
 			}
 		}
 
-		time.Sleep(time.Millisecond * POLL_INTERVAL_MS)
+		time.Sleep(POLL_INTERVAL)
 	}
 }
 func (c *ReplicaSetController) reconcile(rs types.ReplicaSet) error {
