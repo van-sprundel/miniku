@@ -28,4 +28,4 @@ TODO
 
 ## Disclaimer
 
-This project is purely for my own education. That means **no** LLM's, which also means it's not going to be production-ready code. The Pod spec is purposefully simple (name, img, state) because I do not need anything else for my goals.
+This project is purely for my own education. That means **no** LLM's, which also means it's not going to be production-ready code. ~~The Pod spec is purposefully simple (name, img, state) because I do not need anything else for my goals.~~ Turns out that was a lie
