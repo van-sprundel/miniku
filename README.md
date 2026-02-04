@@ -39,22 +39,28 @@ Now our binary logs the following:
 
 Very nice!
 
-## Core Acceptance
+# Core Acceptance
 
 - [x] API server (expose desired state)
 - [x] kubelet (afaik this is just an agent/worker that lives on a node)
 - [x] controller/manager (reconciliation loops for "uptime guarantees" and all that jazz.)
 - [x] rediscover (on restart, find matching label containers and re-assign (docker))
 - [x] scheduler (this will require multiple kubelets)
-- [ ] etcd (k/v store for cluster state, nothing fancy planned)
 
-## Core Spec
+# TODOS
 
-### API
+- [ ] Mark nodes as `NotReady` if kubelet stops responding (will require healthchecks)
+- [ ] Round-robin for scheduler
+- [ ] Pod deletion cleanup (stop containers if the pods are deleted via API)
+- [ ] etcd (k/v store for cluster state so restarts persist)
+
+# Core Spec
+
+## API
 
 TODO
 
-### Kubelet Action
+## Kubelet Action
 
 | Pod Status | Container State | Action                                       |
 | ---------- | --------------- | -------------------------------------------- |
@@ -64,6 +70,6 @@ TODO
 | Running    | exited          | Update pod to Failed                         |
 | Running    | doesn't exist   | Weird state - maybe re-create or mark Failed |
 
-## Disclaimer
+# Disclaimer
 
 This project is purely for my own education. That means **no** LLM's, which also means it's not going to be production-ready code. ~~The Pod spec is purposefully simple (name, img, state) because I do not need anything else for my goals.~~ Turns out that was a lie
