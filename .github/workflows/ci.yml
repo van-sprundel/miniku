@@ -16,9 +16,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v4
+          go-version: "1.23"
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          args: --enable errcheck
 
   test:
     runs-on: ubuntu-latest
@@ -26,15 +28,57 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
-      - name: Test with race detector
-        run: go test -race -v ./...
+          go-version: "1.23"
+      - run: go test -race ./...
 
-  build:
+  benchmark:
+    name: Run benchmarks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
-      - run: go build ./...
+          go-version: "1.23"
+
+      - name: Install benchstat
+        run: go install golang.org/x/perf/cmd/benchstat@latest
+
+      - name: Run benchmarks on PR branch
+        if: github.event_name == 'pull_request'
+        run: go test -bench=. -benchmem -count=5 ./... 2>&1 | tee benchmark-pr.txt
+
+      - name: Run benchmarks on main
+        if: github.event_name == 'push'
+        run: go test -bench=. -benchmem -count=5 ./...
+
+      - name: Checkout base branch
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.base_ref }}
+          clean: false
+
+      - name: Run benchmarks on base branch
+        if: github.event_name == 'pull_request'
+        run: go test -bench=. -benchmem -count=5 ./... 2>&1 | tee benchmark-base.txt
+
+      - name: Compare benchmarks
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "## 📊 Benchmark Results" > benchmark_results.md
+          echo "" >> benchmark_results.md
+          echo "Comparing \`${{ github.head_ref }}\` (PR) vs \`${{ github.base_ref }}\` (base)" >> benchmark_results.md
+          echo "" >> benchmark_results.md
+          echo '```' >> benchmark_results.md
+          benchstat benchmark-base.txt benchmark-pr.txt >> benchmark_results.md 2>&1 || echo "No comparable benchmarks found" >> benchmark_results.md
+          echo '```' >> benchmark_results.md
+          echo "" >> benchmark_results.md
+          echo "<sub>📏 Using Go's benchstat for statistical comparison. Lower is better for time/op and B/op.</sub>" >> benchmark_results.md
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          filePath: benchmark_results.md
+          comment_tag: benchmark_results
