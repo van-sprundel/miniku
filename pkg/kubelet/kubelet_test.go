@@ -258,7 +258,9 @@ func TestReconcilePod(t *testing.T) {
 			memStore.Put(tt.pod.Spec.Name, tt.pod)
 			kubelet := New(memStore, mockRT, "node-1")
 
-			kubelet.reconcilePod(tt.pod)
+			if err := kubelet.reconcilePod(tt.pod); err != nil {
+				t.Fatalf("reconcilePod failed: %v", err)
+			}
 
 			storedPod, found := memStore.Get(tt.pod.Spec.Name)
 

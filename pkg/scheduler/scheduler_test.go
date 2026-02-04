@@ -207,7 +207,9 @@ func TestSchedulerSkipsAlreadyScheduledPods(t *testing.T) {
 	// manually call what `Run()` does for one iteration
 	for _, p := range podStore.List() {
 		if p.Spec.NodeName == "" {
-			sched.scheduleOne(p)
+			if err := sched.scheduleOne(p); err != nil {
+				t.Fatalf("scheduleOne failed: %v", err)
+			}
 		}
 	}
 

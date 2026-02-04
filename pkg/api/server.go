@@ -15,6 +15,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"miniku/pkg/store"
 	"miniku/pkg/types"
 	"net/http"
@@ -44,7 +45,7 @@ func (s *Server) Routes() http.Handler {
 func (s *Server) handleListPods(w http.ResponseWriter, r *http.Request) {
 	pods := s.PodStore.List()
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pods)
+	writeJSON(w, pods)
 }
 
 func (s *Server) handleCreatePod(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +60,7 @@ func (s *Server) handleCreatePod(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(pod)
+	writeJSON(w, pod)
 }
 
 func (s *Server) handleGetPod(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +73,7 @@ func (s *Server) handleGetPod(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(pod)
+	writeJSON(w, pod)
 }
 
 func (s *Server) handleDeletePod(w http.ResponseWriter, r *http.Request) {
@@ -84,7 +85,7 @@ func (s *Server) handleDeletePod(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleListReplicaSets(w http.ResponseWriter, r *http.Request) {
 	replicaSets := s.RSStore.List()
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(replicaSets)
+	writeJSON(w, replicaSets)
 }
 
 func (s *Server) handleCreateReplicaSet(w http.ResponseWriter, r *http.Request) {
@@ -98,7 +99,7 @@ func (s *Server) handleCreateReplicaSet(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(rs)
+	writeJSON(w, rs)
 }
 
 func (s *Server) handleGetReplicaSet(w http.ResponseWriter, r *http.Request) {
@@ -111,11 +112,17 @@ func (s *Server) handleGetReplicaSet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(rs)
+	writeJSON(w, rs)
 }
 
 func (s *Server) handleDeleteReplicaSet(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	s.RSStore.Delete(name)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func writeJSON(w http.ResponseWriter, v any) {
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Printf("failed to encode response: %v", err)
+	}
 }

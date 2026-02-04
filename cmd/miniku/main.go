@@ -1,6 +1,9 @@
 package main
 
 import (
+	"log"
+	"net/http"
+
 	"miniku/pkg/api"
 	"miniku/pkg/controller"
 	"miniku/pkg/kubelet"
@@ -8,7 +11,6 @@ import (
 	"miniku/pkg/scheduler"
 	"miniku/pkg/store"
 	"miniku/pkg/types"
-	"net/http"
 )
 
 func main() {
@@ -39,5 +41,7 @@ func main() {
 		PodStore: podStore,
 		RSStore:  rsStore,
 	}
-	http.ListenAndServe(":8080", srv.Routes())
+	if err := http.ListenAndServe(":8080", srv.Routes()); err != nil {
+		log.Fatalf("server failed: %v", err)
+	}
 }

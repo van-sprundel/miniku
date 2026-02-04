@@ -45,8 +45,12 @@ func (k *Kubelet) Sync() {
 		pod, exists := k.store.Get(container.Name)
 		if !exists {
 			log.Printf("sync: removing orphan container %s (%s)", container.Name, container.ID)
-			k.runtime.Stop(container.ID)
-			k.runtime.Remove(container.ID)
+			if err := k.runtime.Stop(container.ID); err != nil {
+				log.Printf("sync: failed to stop container %s: %v", container.ID, err)
+			}
+			if err := k.runtime.Remove(container.ID); err != nil {
+				log.Printf("sync: failed to remove container %s: %v", container.ID, err)
+			}
 			continue
 		}
 
@@ -73,7 +77,9 @@ func (k *Kubelet) Run() {
 			if pod.Spec.NodeName != k.name {
 				continue
 			}
-			k.reconcilePod(pod)
+			if err := k.reconcilePod(pod); err != nil {
+				log.Printf("kubelet: failed to reconcile pod %s: %v", pod.Spec.Name, err)
+			}
 		}
 
 		// polling

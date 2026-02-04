@@ -11,6 +11,7 @@ package controller
 import (
 	"crypto/rand"
 	"fmt"
+	"log"
 	"miniku/pkg/store"
 	"miniku/pkg/types"
 	"time"
@@ -33,12 +34,13 @@ func New(podStore store.PodStore, rsStore store.ReplicaSetStore) *ReplicaSetCont
 func (c *ReplicaSetController) Run() {
 	for {
 		for _, rs := range c.rsStore.List() {
-			c.reconcile(rs)
+			if err := c.reconcile(rs); err != nil {
+				log.Printf("controller: failed to reconcile %s: %v", rs.Name, err)
+			}
 		}
 
 		time.Sleep(time.Millisecond * POLL_INTERVAL_MS)
 	}
-
 }
 func (c *ReplicaSetController) reconcile(rs types.ReplicaSet) error {
 	matchingPods := c.getMatchingPods(rs)
@@ -82,7 +84,9 @@ func (c *ReplicaSetController) getMatchingPods(rs types.ReplicaSet) []types.Pod 
 // but this is fine for a toy
 func generatePodName(rsName string) string {
 	b := make([]byte, 4)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		log.Printf("warning: failed to generate random bytes: %v", err)
+	}
 	return fmt.Sprintf("%s-%x", rsName, b)
 }
 

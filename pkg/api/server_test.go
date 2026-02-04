@@ -96,7 +96,9 @@ func TestListPods(t *testing.T) {
 			}
 
 			var pods []types.Pod
-			json.NewDecoder(rec.Body).Decode(&pods)
+			if err := json.NewDecoder(rec.Body).Decode(&pods); err != nil {
+				t.Fatalf("failed to decode response: %v", err)
+			}
 			if len(pods) != tt.wantCount {
 				t.Errorf("got %d pods, want %d", len(pods), tt.wantCount)
 			}
@@ -235,7 +237,9 @@ func TestListReplicaSets(t *testing.T) {
 	}
 
 	var rsList []types.ReplicaSet
-	json.NewDecoder(rec.Body).Decode(&rsList)
+	if err := json.NewDecoder(rec.Body).Decode(&rsList); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
 	if len(rsList) != 2 {
 		t.Errorf("got %d replicasets, want 2", len(rsList))
 	}

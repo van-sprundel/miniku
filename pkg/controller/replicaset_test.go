@@ -112,7 +112,7 @@ func TestReconcile(t *testing.T) {
 			rsStore.Put(tt.replicaSet.Name, tt.replicaSet)
 
 			controller := New(podStore, rsStore)
-			controller.reconcile(tt.replicaSet)
+			_ = controller.reconcile(tt.replicaSet)
 
 			// count matching pods after recon.
 			matchingPods := controller.getMatchingPods(tt.replicaSet)
