@@ -39,11 +39,11 @@ jobs:
 
       - name: Run benchmarks on PR branch
         if: github.event_name == 'pull_request'
-        run: go test -bench=. -benchmem -count=5 ./... 2>&1 | tee benchmark-pr.txt
+        run: go test -run=^$ -bench=. -benchmem -benchtime=100ms -count=3 ./... 2>&1 | tee benchmark-pr.txt
 
-      - name: Run benchmarks on main
+      - name: Run benchmarks on master
         if: github.event_name == 'push'
-        run: go test -bench=. -benchmem -count=5 ./...
+        run: go test -run=^$ -bench=. -benchmem -benchtime=100ms -count=3 ./...
 
       - name: Checkout base branch
         if: github.event_name == 'pull_request'
@@ -54,7 +54,7 @@ jobs:
 
       - name: Run benchmarks on base branch
         if: github.event_name == 'pull_request'
-        run: go test -bench=. -benchmem -count=5 ./... 2>&1 | tee benchmark-base.txt
+        run: go test -run=^$ -bench=. -benchmem -benchtime=100ms -count=3 ./... 2>&1 | tee benchmark-base.txt
 
       - name: Compare benchmarks
         if: github.event_name == 'pull_request'
