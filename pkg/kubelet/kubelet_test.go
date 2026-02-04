@@ -117,7 +117,7 @@ func TestCreateAndRun(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRT := &mockRuntime{runFunc: tt.runFunc}
-			memStore := store.NewMemStore()
+			memStore := store.NewMemStore[types.Pod]()
 			kubelet := New(memStore, mockRT)
 
 			beforeCall := time.Now()
@@ -244,8 +244,8 @@ func TestReconcilePod(t *testing.T) {
 					return tt.containerState, tt.getStatusErr
 				},
 			}
-			memStore := store.NewMemStore()
-			memStore.Put(tt.pod)
+			memStore := store.NewMemStore[types.Pod]()
+			memStore.Put(tt.pod.Spec.Name, tt.pod)
 			kubelet := New(memStore, mockRT)
 
 			kubelet.reconcilePod(tt.pod)

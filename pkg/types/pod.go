@@ -9,6 +9,7 @@ type PodSpec struct {
 	Image   string            `json:"image"`
 	Command []string          `json:"command,omitempty"`
 	Env     map[string]string `json:"env,omitempty"`
+	Labels  map[string]string `json:"labels,omitempty"`
 }
 
 type PodStatus string

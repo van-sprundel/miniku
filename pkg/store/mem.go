@@ -1,44 +1,45 @@
 package store
 
 import (
-	"miniku/pkg/types"
 	"sync"
 )
 
-type MemStore struct {
+type MemStore[T any] struct {
 	mu   sync.RWMutex
-	pods map[string]types.Pod
+	data map[string]T
 }
 
-func NewMemStore() *MemStore {
-	return &MemStore{pods: make(map[string]types.Pod)}
+func NewMemStore[T any]() *MemStore[T] {
+	return &MemStore[T]{
+		data: make(map[string]T),
+	}
 }
 
-func (m *MemStore) List() []types.Pod {
+func (m *MemStore[T]) List() []T {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	out := make([]types.Pod, 0, len(m.pods))
-	for _, p := range m.pods {
-		out = append(out, p)
+	out := make([]T, 0, len(m.data))
+	for _, item := range m.data {
+		out = append(out, item)
 	}
 	return out
 }
 
-func (m *MemStore) Get(name string) (types.Pod, bool) {
+func (m *MemStore[T]) Get(name string) (T, bool) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	p, ok := m.pods[name]
-	return p, ok
+	item, ok := m.data[name]
+	return item, ok
 }
 
-func (m *MemStore) Put(pod types.Pod) {
+func (m *MemStore[T]) Put(name string, t T) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.pods[pod.Spec.Name] = pod
+	m.data[name] = t
 }
 
-func (m *MemStore) Delete(name string) {
+func (m *MemStore[T]) Delete(name string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	delete(m.pods, name)
+	delete(m.data, name)
 }

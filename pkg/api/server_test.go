@@ -33,9 +33,9 @@ func TestGetPod(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := store.NewMemStore()
+			st := store.NewMemStore[types.Pod]()
 			for _, p := range tt.setupPods {
-				st.Put(p)
+				st.Put(p.Spec.Name, p)
 			}
 			srv := &Server{Store: st}
 
@@ -75,9 +75,9 @@ func TestListPods(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			st := store.NewMemStore()
+			st := store.NewMemStore[types.Pod]()
 			for _, p := range tt.setupPods {
-				st.Put(p)
+				st.Put(p.Spec.Name, p)
 			}
 			srv := &Server{Store: st}
 
@@ -100,7 +100,7 @@ func TestListPods(t *testing.T) {
 }
 
 func TestCreatePod(t *testing.T) {
-	st := store.NewMemStore()
+	st := store.NewMemStore[types.Pod]()
 	srv := &Server{Store: st}
 
 	body := `{"name":"test","image":"nginx"}`
@@ -126,8 +126,8 @@ func TestCreatePod(t *testing.T) {
 }
 
 func TestDeleteThenGet(t *testing.T) {
-	st := store.NewMemStore()
-	st.Put(types.Pod{Spec: types.PodSpec{Name: "victim", Image: "nginx"}})
+	st := store.NewMemStore[types.Pod]()
+	st.Put("victim", types.Pod{Spec: types.PodSpec{Name: "victim", Image: "nginx"}})
 	srv := &Server{Store: st}
 
 	// delete the pod

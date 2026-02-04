@@ -5,15 +5,16 @@ import (
 	"miniku/pkg/kubelet"
 	"miniku/pkg/runtime"
 	"miniku/pkg/store"
+	"miniku/pkg/types"
 	"net/http"
 )
 
 func main() {
-	store := store.NewMemStore()
+	podStore := store.NewMemStore[types.Pod]()
 	runtime := &runtime.DockerCLIRuntime{}
-	kubelet := kubelet.New(store, runtime)
+	kubelet := kubelet.New(podStore, runtime)
 	go kubelet.Run()
 
-	srv := &api.Server{Store: store}
+	srv := &api.Server{Store: podStore}
 	http.ListenAndServe(":8080", srv.Routes())
 }

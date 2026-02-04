@@ -14,7 +14,7 @@ import (
 )
 
 type Server struct {
-	Store store.Store
+	Store store.PodStore
 }
 
 func (s *Server) Routes() http.Handler {
@@ -43,7 +43,7 @@ func (s *Server) handleCreatePod(w http.ResponseWriter, r *http.Request) {
 	}
 
 	pod := types.NewPod(podSpec)
-	s.Store.Put(pod)
+	s.Store.Put(pod.Spec.Name, pod)
 
 	w.WriteHeader(http.StatusCreated)
 }

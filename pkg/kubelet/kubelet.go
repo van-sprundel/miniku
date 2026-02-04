@@ -16,11 +16,11 @@ const BASE_DELAY_MS time.Duration = 1000
 const MAX_DELAY_MS time.Duration = 60_000
 
 type Kubelet struct {
-	store   store.Store
+	store   store.PodStore
 	runtime runtime.Runtime
 }
 
-func New(store store.Store, runtime runtime.Runtime) Kubelet {
+func New(store store.PodStore, runtime runtime.Runtime) Kubelet {
 	return Kubelet{
 		store,
 		runtime,
@@ -85,7 +85,7 @@ func (k *Kubelet) reconcilePod(pod types.Pod) error {
 		return fmt.Errorf("unhandled state")
 	}
 
-	k.store.Put(updatedPod)
+	k.store.Put(updatedPod.Spec.Name, updatedPod)
 	return nil
 }
 
