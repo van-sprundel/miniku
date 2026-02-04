@@ -72,7 +72,30 @@ func (r *DockerCLIRuntime) GetStatus(containerID string) (*types.ContainerState,
 	default:
 		return &types.ContainerState{Status: types.ContainerStatusUnknown}, nil
 	}
+}
 
+// `docker ps -a --filter label=miniku=true --format "{{.ID}} {{.Names}}"`
+func (r *DockerCLIRuntime) List() ([]ContainerInfo, error) {
+	res, err := execCommand("ps", "-a", "--filter", "label="+DOCKER_FILTER_LABEL, "--format", "{{.ID}} {{.Names}}")
+	if err != nil {
+		return nil, err
+	}
+
+	var containers []ContainerInfo
+	lines := strings.SplitSeq(strings.TrimSpace(string(res)), "\n")
+	for line := range lines {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, " ", 2)
+		if len(parts) == 2 {
+			containers = append(containers, ContainerInfo{
+				ID:   parts[0],
+				Name: parts[1],
+			})
+		}
+	}
+	return containers, nil
 }
 
 func execCommand(args ...string) ([]byte, error) {

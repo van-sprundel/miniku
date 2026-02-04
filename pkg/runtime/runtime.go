@@ -12,9 +12,15 @@ import (
 	"miniku/pkg/types"
 )
 
+type ContainerInfo struct {
+	ID   string
+	Name string
+}
+
 type Runtime interface {
 	Run(pod types.PodSpec) (containerID string, err error)
 	Stop(containerID string) error
 	Remove(containerID string) error
 	GetStatus(containerID string) (*types.ContainerState, error)
+	List() ([]ContainerInfo, error)
 }

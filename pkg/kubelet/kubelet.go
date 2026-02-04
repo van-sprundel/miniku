@@ -2,6 +2,7 @@ package kubelet
 
 import (
 	"fmt"
+	"log"
 	"miniku/pkg/runtime"
 	"miniku/pkg/store"
 	"miniku/pkg/types"
@@ -27,11 +28,38 @@ func New(store store.PodStore, runtime runtime.Runtime) Kubelet {
 	}
 }
 
-// infinite loop with time.Sleep
-// list all pods from store
-// for each, compare deired vs actual
-// take action to converge
+// rediscover existing containers on startup and link them to pods.
+// orphaned containers (no matching pod) are stopped and removed.
+//
+// NOTE: this doesn't work right now because we're running the store in-memory so state will be lost
+func (k *Kubelet) Sync() {
+	containers, err := k.runtime.List()
+	if err != nil {
+		log.Printf("sync: failed to list containers: %v", err)
+		return
+	}
+
+	for _, container := range containers {
+		pod, exists := k.store.Get(container.Name)
+		if !exists {
+			log.Printf("sync: removing orphan container %s (%s)", container.Name, container.ID)
+			k.runtime.Stop(container.ID)
+			k.runtime.Remove(container.ID)
+			continue
+		}
+
+		if pod.ContainerID == "" || pod.ContainerID != container.ID {
+			log.Printf("sync: linking container %s to pod %s", container.ID, pod.Spec.Name)
+			pod.ContainerID = container.ID
+			pod.Status = types.PodStatusRunning
+			k.store.Put(pod.Spec.Name, pod)
+		}
+	}
+}
+
 func (k *Kubelet) Run() {
+	k.Sync()
+
 	for {
 		for _, pod := range k.store.List() {
 			k.reconcilePod(pod)
@@ -40,7 +68,6 @@ func (k *Kubelet) Run() {
 		// polling
 		time.Sleep(time.Millisecond * POLL_INTERVAL_MS)
 	}
-
 }
 
 func (k *Kubelet) reconcilePod(pod types.Pod) error {

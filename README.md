@@ -24,7 +24,8 @@ fe3685e63fa1   nginx:latest   "/docker-entrypoint.…"   3 seconds ago   Up 3 se
 - [x] API server (expose desired state)
 - [x] kubelet (afaik this is just an agent/worker that lives on a node)
 - [x] controller/manager (reconciliation loops for "uptime guarantees" and all that jazz.)
-- [ ] scheduler
+- [x] rediscover (on restart, find matching label containers and re-assign (docker))
+- [ ] scheduler (this will require multiple kubelets)
 - [ ] etcd (k/v store for cluster state, nothing fancy planned)
 
 ## Core Spec
