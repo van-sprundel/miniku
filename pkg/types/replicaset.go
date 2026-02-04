@@ -1,9 +1,9 @@
 package types
 
 type ReplicaSet struct {
-	Name         string
-	DesiredCount uint
-	CurrentCount uint
-	Selector     map[string]string // e.g., {"app": "nginx"}
-	Template     PodSpec
+	Name         string            `json:"name"`
+	DesiredCount uint              `json:"desiredCount"`
+	CurrentCount uint              `json:"currentCount"`
+	Selector     map[string]string `json:"selector"`
+	Template     PodSpec           `json:"template"`
 }

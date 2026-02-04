@@ -2,11 +2,28 @@
 
 I wanted to learn a bit more about distributed systems, and after reading more of the [500 lines or less book](https://aosabook.org/en/500L/introduction.html), I wanted to have a crack at a mini version of K8S.
 
+```sh
+> curl -X POST 127.0.0.1:8080/replicasets -d '{"name":"nginx","desiredCount":3,"selector":{"app":"nginx"},"template":{"image":"nginx:latest"}}'
+{"name":"nginx","desiredCount":3,"currentCount":0,"selector":{"app":"nginx"},"template":{"name":"","image":"nginx:latest"}}
+
+> curl 127.0.0.1:8080/replicasets
+[{"name":"nginx","desiredCount":3,"currentCount":3,"selector":{"app":"nginx"},"template":{"name":"","image":"nginx:latest"}}]
+
+> curl 127.0.0.1:8080/pods
+[{"spec":{"name":"nginx-ca7f8c36","image":"nginx:latest","labels":{"app":"nginx"}},"status":"Pending","retry_count":0,"next_retry_at":"0001-01-01T00:00:00Z"},{"spec":{"name":"nginx-7cfc52b8","image":"nginx:latest","labels":{"app":"nginx"}},"status":"Pending","retry_count":0,"next_retry_at":"0001-01-01T00:00:00Z"},{"spec":{"name":"nginx-161d920c","image":"nginx:latest","labels":{"app":"nginx"}},"status":"Pending","retry_count":0,"next_retry_at":"0001-01-01T00:00:00Z"}]
+
+> docker ps
+CONTAINER ID   IMAGE          COMMAND                  CREATED         STATUS         PORTS     NAMES
+590cb04088f5   nginx:latest   "/docker-entrypoint.…"   2 seconds ago   Up 2 seconds   80/tcp    nginx-407fd916
+d08ef4919f86   nginx:latest   "/docker-entrypoint.…"   3 seconds ago   Up 2 seconds   80/tcp    nginx-6f999539
+fe3685e63fa1   nginx:latest   "/docker-entrypoint.…"   3 seconds ago   Up 3 seconds   80/tcp    nginx-9271c514
+```
+
 ## Core Acceptance
 
 - [x] API server (expose desired state)
 - [x] kubelet (afaik this is just an agent/worker that lives on a node)
-- [ ] controller/manager (reconciliation loops for "uptime guarantees" and all that jazz.)
+- [x] controller/manager (reconciliation loops for "uptime guarantees" and all that jazz.)
 - [ ] scheduler
 - [ ] etcd (k/v store for cluster state, nothing fancy planned)
 

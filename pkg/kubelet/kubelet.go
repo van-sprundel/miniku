@@ -45,14 +45,19 @@ func (k *Kubelet) Run() {
 
 func (k *Kubelet) reconcilePod(pod types.Pod) error {
 	podStatus := pod.Status
-	containerState, err := k.runtime.GetStatus(pod.ContainerID)
-	if err != nil {
-		//TODO handle each err properly
-		// e.g. container not found should reconcile into re-creating pod
-		return err
+
+	var containerState *types.ContainerState
+	if pod.ContainerID != "" {
+		var err error
+		containerState, err = k.runtime.GetStatus(pod.ContainerID)
+		if err != nil {
+			// container not found
+			containerState = nil
+		}
 	}
 
 	var updatedPod types.Pod
+	var err error
 	switch {
 	// pending but container not existing yet
 	case podStatus == types.PodStatusPending && containerState == nil:
@@ -62,7 +67,7 @@ func (k *Kubelet) reconcilePod(pod types.Pod) error {
 		}
 		updatedPod, err = k.createAndRun(pod)
 		if err != nil {
-			// TODO panic?
+			return err
 		}
 
 	// pending and created but should be running

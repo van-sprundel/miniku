@@ -2,6 +2,7 @@ package main
 
 import (
 	"miniku/pkg/api"
+	"miniku/pkg/controller"
 	"miniku/pkg/kubelet"
 	"miniku/pkg/runtime"
 	"miniku/pkg/store"
@@ -11,10 +12,21 @@ import (
 
 func main() {
 	podStore := store.NewMemStore[types.Pod]()
-	runtime := &runtime.DockerCLIRuntime{}
-	kubelet := kubelet.New(podStore, runtime)
+	rsStore := store.NewMemStore[types.ReplicaSet]()
+
+	// kubelet: reconciles pods -> containers
+	rt := &runtime.DockerCLIRuntime{}
+	kubelet := kubelet.New(podStore, rt)
 	go kubelet.Run()
 
-	srv := &api.Server{Store: podStore}
+	// controller: reconciles replicasets -> pods
+	rsController := controller.New(podStore, rsStore)
+	go rsController.Run()
+
+	// API Server
+	srv := &api.Server{
+		PodStore: podStore,
+		RSStore:  rsStore,
+	}
 	http.ListenAndServe(":8080", srv.Routes())
 }
