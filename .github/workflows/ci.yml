@@ -28,7 +28,7 @@ jobs:
       - run: go test -race ./...
 
   benchmark:
-    name: Run benchmarks
+    name: run benchmarks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
