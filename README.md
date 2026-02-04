@@ -1,4 +1,4 @@
-# Miniku (Mini Kubernetes)
+# MiniKu (Mini Kubernetes)
 
 I wanted to learn a bit more about distributed systems, and after reading more of the [500 lines or less book](https://aosabook.org/en/500L/introduction.html), I wanted to have a crack at a mini version of K8S.
 
