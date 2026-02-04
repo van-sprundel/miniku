@@ -2,6 +2,8 @@ package scheduler
 
 import (
 	"fmt"
+	"io"
+	"log"
 	"miniku/pkg/store"
 	"miniku/pkg/types"
 	"testing"
@@ -33,6 +35,9 @@ func BenchmarkPickNode(b *testing.B) {
 }
 
 func BenchmarkScheduleOne(b *testing.B) {
+	log.SetOutput(io.Discard)
+	defer log.SetOutput(nil)
+
 	podStore := store.NewMemStore[types.Pod]()
 	nodeStore := store.NewMemStore[types.Node]()
 

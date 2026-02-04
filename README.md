@@ -53,8 +53,6 @@ Very nice!
 - [ ] Round-robin for scheduler
 - [ ] Pod deletion cleanup (stop containers if the pods are deleted via API)
 - [ ] etcd (k/v store for cluster state so restarts persist)
-- [ ] Improve logging (e.g. rn in CI it's logging everything. Should be on DEBUG log level)
-- [ ] Benchmarking (in CI/CD it was running >5 min https://github.com/van-sprundel/miniku/actions/runs/21676615592/job/62498724957)
 
 # Core Spec
 
