@@ -10,4 +10,5 @@ type Store[T any] interface {
 }
 
 type PodStore = Store[types.Pod]
+type NodeStore = Store[types.Node]
 type ReplicaSetStore = Store[types.ReplicaSet]

@@ -5,6 +5,7 @@ import (
 	"miniku/pkg/controller"
 	"miniku/pkg/kubelet"
 	"miniku/pkg/runtime"
+	"miniku/pkg/scheduler"
 	"miniku/pkg/store"
 	"miniku/pkg/types"
 	"net/http"
@@ -13,13 +14,23 @@ import (
 func main() {
 	podStore := store.NewMemStore[types.Pod]()
 	rsStore := store.NewMemStore[types.ReplicaSet]()
+	nodeStore := store.NewMemStore[types.Node]()
 
-	// kubelet: reconciles pods -> containers
+	nodeStore.Put("node-1", types.Node{Name: "node-1", Status: types.NodeStateReady})
+	nodeStore.Put("node-2", types.Node{Name: "node-2", Status: types.NodeStateReady})
+
+	// assign pods to nodes
+	sched := scheduler.New(podStore, nodeStore)
+	go sched.Run()
+
+	// reconcile pods -> containers (one per node)
 	rt := &runtime.DockerCLIRuntime{}
-	kubelet := kubelet.New(podStore, rt)
-	go kubelet.Run()
+	kubelet1 := kubelet.New(podStore, rt, "node-1")
+	kubelet2 := kubelet.New(podStore, rt, "node-2")
+	go kubelet1.Run()
+	go kubelet2.Run()
 
-	// controller: reconciles replicasets -> pods
+	// reconcile replicasets -> pods
 	rsController := controller.New(podStore, rsStore)
 	go rsController.Run()
 

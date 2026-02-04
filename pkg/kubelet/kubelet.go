@@ -17,12 +17,14 @@ const BASE_DELAY_MS time.Duration = 1000
 const MAX_DELAY_MS time.Duration = 60_000
 
 type Kubelet struct {
+	name    string
 	store   store.PodStore
 	runtime runtime.Runtime
 }
 
-func New(store store.PodStore, runtime runtime.Runtime) Kubelet {
+func New(store store.PodStore, runtime runtime.Runtime, name string) Kubelet {
 	return Kubelet{
+		name,
 		store,
 		runtime,
 	}
@@ -48,6 +50,11 @@ func (k *Kubelet) Sync() {
 			continue
 		}
 
+		// only manage containers for pods assigned to this node
+		if pod.Spec.NodeName != k.name {
+			continue
+		}
+
 		if pod.ContainerID == "" || pod.ContainerID != container.ID {
 			log.Printf("sync: linking container %s to pod %s", container.ID, pod.Spec.Name)
 			pod.ContainerID = container.ID
@@ -62,6 +69,10 @@ func (k *Kubelet) Run() {
 
 	for {
 		for _, pod := range k.store.List() {
+			// only reconcile pods assigned to this node
+			if pod.Spec.NodeName != k.name {
+				continue
+			}
 			k.reconcilePod(pod)
 		}
 

@@ -128,7 +128,7 @@ func TestCreateAndRun(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRT := &mockRuntime{runFunc: tt.runFunc}
 			memStore := store.NewMemStore[types.Pod]()
-			kubelet := New(memStore, mockRT)
+			kubelet := New(memStore, mockRT, "node-1")
 
 			beforeCall := time.Now()
 			result, _ := kubelet.createAndRun(tt.pod)
@@ -256,7 +256,7 @@ func TestReconcilePod(t *testing.T) {
 			}
 			memStore := store.NewMemStore[types.Pod]()
 			memStore.Put(tt.pod.Spec.Name, tt.pod)
-			kubelet := New(memStore, mockRT)
+			kubelet := New(memStore, mockRT, "node-1")
 
 			kubelet.reconcilePod(tt.pod)
 
@@ -295,14 +295,14 @@ func TestSync(t *testing.T) {
 		{
 			name: "link container to pod",
 			existingPods: []types.Pod{
-				{Spec: types.PodSpec{Name: "nginx-1"}, Status: types.PodStatusPending},
+				{Spec: types.PodSpec{Name: "nginx-1", NodeName: "node-1"}, Status: types.PodStatusPending},
 			},
 			existingContainers: []runtime.ContainerInfo{
 				{ID: "abc123", Name: "nginx-1"},
 			},
 			expectedPodState: map[string]types.Pod{
 				"nginx-1": {
-					Spec:        types.PodSpec{Name: "nginx-1"},
+					Spec:        types.PodSpec{Name: "nginx-1", NodeName: "node-1"},
 					Status:      types.PodStatusRunning,
 					ContainerID: "abc123",
 				},
@@ -313,14 +313,14 @@ func TestSync(t *testing.T) {
 		{
 			name: "container already linked",
 			existingPods: []types.Pod{
-				{Spec: types.PodSpec{Name: "nginx-1"}, Status: types.PodStatusRunning, ContainerID: "abc123"},
+				{Spec: types.PodSpec{Name: "nginx-1", NodeName: "node-1"}, Status: types.PodStatusRunning, ContainerID: "abc123"},
 			},
 			existingContainers: []runtime.ContainerInfo{
 				{ID: "abc123", Name: "nginx-1"},
 			},
 			expectedPodState: map[string]types.Pod{
 				"nginx-1": {
-					Spec:        types.PodSpec{Name: "nginx-1"},
+					Spec:        types.PodSpec{Name: "nginx-1", NodeName: "node-1"},
 					Status:      types.PodStatusRunning,
 					ContainerID: "abc123",
 				},
@@ -341,7 +341,7 @@ func TestSync(t *testing.T) {
 		{
 			name: "mixed - link one, remove orphan",
 			existingPods: []types.Pod{
-				{Spec: types.PodSpec{Name: "nginx-1"}, Status: types.PodStatusPending},
+				{Spec: types.PodSpec{Name: "nginx-1", NodeName: "node-1"}, Status: types.PodStatusPending},
 			},
 			existingContainers: []runtime.ContainerInfo{
 				{ID: "abc123", Name: "nginx-1"},
@@ -349,7 +349,7 @@ func TestSync(t *testing.T) {
 			},
 			expectedPodState: map[string]types.Pod{
 				"nginx-1": {
-					Spec:        types.PodSpec{Name: "nginx-1"},
+					Spec:        types.PodSpec{Name: "nginx-1", NodeName: "node-1"},
 					Status:      types.PodStatusRunning,
 					ContainerID: "abc123",
 				},
@@ -360,12 +360,12 @@ func TestSync(t *testing.T) {
 		{
 			name: "no containers",
 			existingPods: []types.Pod{
-				{Spec: types.PodSpec{Name: "nginx-1"}, Status: types.PodStatusPending},
+				{Spec: types.PodSpec{Name: "nginx-1", NodeName: "node-1"}, Status: types.PodStatusPending},
 			},
 			existingContainers: []runtime.ContainerInfo{},
 			expectedPodState: map[string]types.Pod{
 				"nginx-1": {
-					Spec:   types.PodSpec{Name: "nginx-1"},
+					Spec:   types.PodSpec{Name: "nginx-1", NodeName: "node-1"},
 					Status: types.PodStatusPending,
 				},
 			},
@@ -375,16 +375,33 @@ func TestSync(t *testing.T) {
 		{
 			name: "update stale container ID",
 			existingPods: []types.Pod{
-				{Spec: types.PodSpec{Name: "nginx-1"}, Status: types.PodStatusRunning, ContainerID: "old-id"},
+				{Spec: types.PodSpec{Name: "nginx-1", NodeName: "node-1"}, Status: types.PodStatusRunning, ContainerID: "old-id"},
 			},
 			existingContainers: []runtime.ContainerInfo{
 				{ID: "new-id", Name: "nginx-1"},
 			},
 			expectedPodState: map[string]types.Pod{
 				"nginx-1": {
-					Spec:        types.PodSpec{Name: "nginx-1"},
+					Spec:        types.PodSpec{Name: "nginx-1", NodeName: "node-1"},
 					Status:      types.PodStatusRunning,
 					ContainerID: "new-id",
+				},
+			},
+			expectStopped: []string{},
+			expectRemoved: []string{},
+		},
+		{
+			name: "skip pods assigned to other nodes",
+			existingPods: []types.Pod{
+				{Spec: types.PodSpec{Name: "nginx-1", NodeName: "node-2"}, Status: types.PodStatusPending},
+			},
+			existingContainers: []runtime.ContainerInfo{
+				{ID: "abc123", Name: "nginx-1"},
+			},
+			expectedPodState: map[string]types.Pod{
+				"nginx-1": {
+					Spec:   types.PodSpec{Name: "nginx-1", NodeName: "node-2"},
+					Status: types.PodStatusPending, // unchanged - not our pod
 				},
 			},
 			expectStopped: []string{},
@@ -416,7 +433,7 @@ func TestSync(t *testing.T) {
 				podStore.Put(pod.Spec.Name, pod)
 			}
 
-			kubelet := New(podStore, mockRT)
+			kubelet := New(podStore, mockRT, "node-1")
 			kubelet.Sync()
 
 			for name, expectedPod := range tt.expectedPodState {

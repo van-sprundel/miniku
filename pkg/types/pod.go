@@ -5,11 +5,12 @@ import (
 )
 
 type PodSpec struct {
-	Name    string            `json:"name"`
-	Image   string            `json:"image"`
-	Command []string          `json:"command,omitempty"`
-	Env     map[string]string `json:"env,omitempty"`
-	Labels  map[string]string `json:"labels,omitempty"`
+	Name     string            `json:"name"`
+	Image    string            `json:"image"`
+	NodeName string            `json:"node_name"`
+	Command  []string          `json:"command,omitempty"`
+	Env      map[string]string `json:"env,omitempty"`
+	Labels   map[string]string `json:"labels,omitempty"`
 }
 
 type PodStatus string
@@ -27,7 +28,7 @@ type Pod struct {
 	ContainerID string    `json:"containerId,omitempty"`
 	Message     string    `json:"message,omitempty"`
 	RetryCount  uint8     `json:"retry_count"`
-	NextRetryAt time.Time `json:"next_retry_at,omitempty"`
+	NextRetryAt time.Time `json:"next_retry_at"`
 }
 
 func NewPod(Spec PodSpec) Pod {
