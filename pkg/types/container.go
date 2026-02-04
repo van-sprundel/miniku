@@ -8,7 +8,8 @@ type ContainerState struct {
 type ContainerStatus string
 
 const (
-	ContainerStatusRunning ContainerStatus = "Running"
-	ContainerStatusExited  ContainerStatus = "Exited"
-	ContainerStatusUnknown ContainerStatus = "Unknown"
+	ContainerStatusRunning     ContainerStatus = "Running"
+	ContainerStatusTerminating ContainerStatus = "Terminating"
+	ContainerStatusExited      ContainerStatus = "Exited"
+	ContainerStatusUnknown     ContainerStatus = "Unknown"
 )

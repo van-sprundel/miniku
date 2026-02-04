@@ -1,5 +1,9 @@
 package types
 
+import (
+	"time"
+)
+
 type PodSpec struct {
 	Name    string            `json:"name"`
 	Image   string            `json:"image"`
@@ -21,6 +25,8 @@ type Pod struct {
 	Status      PodStatus `json:"status"`
 	ContainerID string    `json:"containerId,omitempty"`
 	Message     string    `json:"message,omitempty"`
+	RetryCount  uint8     `json:"retry_count"`
+	NextRetryAt time.Time `json:"next_retry_at,omitempty"`
 }
 
 func NewPod(Spec PodSpec) Pod {

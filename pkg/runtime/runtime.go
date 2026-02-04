@@ -16,5 +16,5 @@ type Runtime interface {
 	Run(pod types.PodSpec) (containerID string, err error)
 	Stop(containerID string) error
 	Remove(containerID string) error
-	GetStatus(containerID string) (*types.ContainerStatus, error)
+	GetStatus(containerID string) (*types.ContainerState, error)
 }
