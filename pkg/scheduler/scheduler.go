@@ -3,7 +3,6 @@ package scheduler
 import (
 	"errors"
 	"log"
-	"math/rand"
 	"miniku/pkg/store"
 	"miniku/pkg/types"
 	"time"
@@ -12,6 +11,7 @@ import (
 type Scheduler struct {
 	podStore  store.PodStore
 	nodeStore store.NodeStore
+	nextIndex uint
 }
 
 const POLL_INTERVAL = time.Millisecond * 5000
@@ -20,6 +20,7 @@ func New(podStore store.PodStore, nodeStore store.NodeStore) *Scheduler {
 	return &Scheduler{
 		podStore,
 		nodeStore,
+		0,
 	}
 }
 
@@ -61,8 +62,9 @@ func (s *Scheduler) pickNode() (types.Node, bool) {
 		return types.Node{}, false
 	}
 
-	//TODO for now random, replace with round-robin
-	return availableNodes[rand.Intn(len(availableNodes))], true
+	node := availableNodes[s.nextIndex%uint(len(availableNodes))]
+	s.nextIndex++
+	return node, true
 }
 
 // filter Ready nodes
