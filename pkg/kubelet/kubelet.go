@@ -17,15 +17,17 @@ const BASE_DELAY time.Duration = 1000
 const MAX_DELAY time.Duration = 60_000
 
 type Kubelet struct {
-	name    string
-	store   store.PodStore
-	runtime runtime.Runtime
+	name      string
+	podStore  store.PodStore
+	nodeStore store.NodeStore
+	runtime   runtime.Runtime
 }
 
-func New(store store.PodStore, runtime runtime.Runtime, name string) Kubelet {
+func New(podStore store.PodStore, nodeStore store.NodeStore, runtime runtime.Runtime, name string) Kubelet {
 	return Kubelet{
 		name,
-		store,
+		podStore,
+		nodeStore,
 		runtime,
 	}
 }
@@ -42,7 +44,7 @@ func (k *Kubelet) Sync() {
 	}
 
 	for _, container := range containers {
-		pod, exists := k.store.Get(container.Name)
+		pod, exists := k.podStore.Get(container.Name)
 		if !exists {
 			log.Printf("sync: removing orphan container %s (%s)", container.Name, container.ID)
 			if err := k.runtime.Stop(container.ID); err != nil {
@@ -63,7 +65,7 @@ func (k *Kubelet) Sync() {
 			log.Printf("sync: linking container %s to pod %s", container.ID, pod.Spec.Name)
 			pod.ContainerID = container.ID
 			pod.Status = types.PodStatusRunning
-			k.store.Put(pod.Spec.Name, pod)
+			k.podStore.Put(pod.Spec.Name, pod)
 		}
 	}
 }
@@ -72,7 +74,7 @@ func (k *Kubelet) Run() {
 	k.Sync()
 
 	for {
-		for _, pod := range k.store.List() {
+		for _, pod := range k.podStore.List() {
 			// only reconcile pods assigned to this node
 			if pod.Spec.NodeName != k.name {
 				continue
@@ -83,6 +85,7 @@ func (k *Kubelet) Run() {
 		}
 
 		// polling
+		k.updateHeartbeat()
 		time.Sleep(POLL_INTERVAL)
 	}
 }
@@ -134,7 +137,7 @@ func (k *Kubelet) reconcilePod(pod types.Pod) error {
 		return fmt.Errorf("unhandled state")
 	}
 
-	k.store.Put(updatedPod.Spec.Name, updatedPod)
+	k.podStore.Put(updatedPod.Spec.Name, updatedPod)
 	return nil
 }
 
@@ -177,4 +180,12 @@ func (k *Kubelet) handleMissingContainer(pod types.Pod) types.Pod {
 func calculateNextRetry(pod types.Pod) time.Time {
 	delay := min(MAX_DELAY, BASE_DELAY*time.Duration(1<<pod.RetryCount))
 	return time.Now().Add(delay)
+}
+
+func (k *Kubelet) updateHeartbeat() {
+	node, ok := k.nodeStore.Get(k.name)
+	if ok {
+		node.LastHeartbeat = time.Now()
+		k.nodeStore.Put(k.name, node)
+	}
 }

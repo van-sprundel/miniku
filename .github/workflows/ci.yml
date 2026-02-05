@@ -30,48 +30,8 @@ jobs:
   benchmark:
     name: run benchmarks
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
-
-      - name: Install benchstat
-        run: go install golang.org/x/perf/cmd/benchstat@latest
-
-      - name: Run benchmarks on PR branch
-        if: github.event_name == 'pull_request'
-        run: go test -run=^$ -bench=. -benchmem -benchtime=100ms -count=3 ./... 2>&1 | tee benchmark-pr.txt
-
-      - name: Run benchmarks on master
-        if: github.event_name == 'push'
-        run: go test -run=^$ -bench=. -benchmem -benchtime=100ms -count=3 ./...
-
-      - name: Checkout base branch
-        if: github.event_name == 'pull_request'
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.base_ref }}
-          clean: false
-
-      - name: Run benchmarks on base branch
-        if: github.event_name == 'pull_request'
-        run: go test -run=^$ -bench=. -benchmem -benchtime=100ms -count=3 ./... 2>&1 | tee benchmark-base.txt
-
-      - name: Compare benchmarks
-        if: github.event_name == 'pull_request'
-        run: |
-          echo "## 📊 Benchmark Results" > benchmark_results.md
-          echo "" >> benchmark_results.md
-          echo "Comparing \`${{ github.head_ref }}\` (PR) vs \`${{ github.base_ref }}\` (base)" >> benchmark_results.md
-          echo "" >> benchmark_results.md
-          echo '```' >> benchmark_results.md
-          benchstat benchmark-base.txt benchmark-pr.txt >> benchmark_results.md 2>&1 || echo "No comparable benchmarks found" >> benchmark_results.md
-          echo '```' >> benchmark_results.md
-          echo "" >> benchmark_results.md
-          echo "<sub>📏 Using Go's benchstat for statistical comparison. Lower is better for time/op and B/op.</sub>" >> benchmark_results.md
-
-      - name: Comment PR with results
-        if: github.event_name == 'pull_request'
-        uses: thollander/actions-comment-pull-request@v2
-        with:
-          filePath: benchmark_results.md
-          comment_tag: benchmark_results
+      - run: go test -run=^$ -bench=. -benchmem ./...
