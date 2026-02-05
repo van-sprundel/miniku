@@ -49,12 +49,14 @@ func BenchmarkMemStoreList(b *testing.B) {
 }
 
 func BenchmarkMemStoreDelete(b *testing.B) {
-	for b.Loop() {
-		b.StopTimer()
-		store := NewMemStore[testItem]()
-		store.Put("item", testItem{Name: "test", Value: 42})
-		b.StartTimer()
+	store := NewMemStore[testItem]()
+	// pre-populate
+	for i := range 1000 {
+		store.Put(fmt.Sprintf("item-%d", i), testItem{Name: "test", Value: i})
+	}
 
-		store.Delete("item")
+	for i := 0; b.Loop(); i++ {
+		store.Delete(fmt.Sprintf("item-%d", i%1000))
+		store.Put(fmt.Sprintf("item-%d", i%1000), testItem{Name: "test", Value: i})
 	}
 }
