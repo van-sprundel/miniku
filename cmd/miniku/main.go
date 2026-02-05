@@ -27,14 +27,18 @@ func main() {
 
 	// reconcile pods -> containers (one per node)
 	rt := &runtime.DockerCLIRuntime{}
-	kubelet1 := kubelet.New(podStore, rt, "node-1")
-	kubelet2 := kubelet.New(podStore, rt, "node-2")
+	kubelet1 := kubelet.New(podStore, nodeStore, rt, "node-1")
+	kubelet2 := kubelet.New(podStore, nodeStore, rt, "node-2")
 	go kubelet1.Run()
 	go kubelet2.Run()
 
 	// reconcile replicasets -> pods
 	rsController := controller.New(podStore, rsStore)
 	go rsController.Run()
+
+	// mark nodes NotReady if heartbeat is stale
+	nodeController := controller.NewNodeController(nodeStore)
+	go nodeController.Run()
 
 	// API Server
 	srv := &api.Server{

@@ -127,8 +127,9 @@ func TestCreateAndRun(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRT := &mockRuntime{runFunc: tt.runFunc}
-			memStore := store.NewMemStore[types.Pod]()
-			kubelet := New(memStore, mockRT, "node-1")
+			podStore := store.NewMemStore[types.Pod]()
+			nodeStore := store.NewMemStore[types.Node]()
+			kubelet := New(podStore, nodeStore, mockRT, "node-1")
 
 			beforeCall := time.Now()
 			result, _ := kubelet.createAndRun(tt.pod)
@@ -254,15 +255,17 @@ func TestReconcilePod(t *testing.T) {
 					return tt.containerState, tt.getStatusErr
 				},
 			}
-			memStore := store.NewMemStore[types.Pod]()
-			memStore.Put(tt.pod.Spec.Name, tt.pod)
-			kubelet := New(memStore, mockRT, "node-1")
+			podStore := store.NewMemStore[types.Pod]()
+			podStore.Put(tt.pod.Spec.Name, tt.pod)
+
+			nodeStore := store.NewMemStore[types.Node]()
+			kubelet := New(podStore, nodeStore, mockRT, "node-1")
 
 			if err := kubelet.reconcilePod(tt.pod); err != nil {
 				t.Fatalf("reconcilePod failed: %v", err)
 			}
 
-			storedPod, found := memStore.Get(tt.pod.Spec.Name)
+			storedPod, found := podStore.Get(tt.pod.Spec.Name)
 
 			if tt.expectStoreUpdate {
 				if !found {
@@ -435,7 +438,9 @@ func TestSync(t *testing.T) {
 				podStore.Put(pod.Spec.Name, pod)
 			}
 
-			kubelet := New(podStore, mockRT, "node-1")
+			nodeStore := store.NewMemStore[types.Node]()
+
+			kubelet := New(podStore, nodeStore, mockRT, "node-1")
 			kubelet.Sync()
 
 			for name, expectedPod := range tt.expectedPodState {
@@ -469,6 +474,55 @@ func TestSync(t *testing.T) {
 				found := slices.Contains(removedContainers, expectedID)
 				if !found {
 					t.Errorf("expected container %s to be removed", expectedID)
+				}
+			}
+		})
+	}
+}
+
+func TestUpdateHeartbeat(t *testing.T) {
+	tests := []struct {
+		name         string
+		node         *types.Node
+		expectUpdate bool
+	}{
+		{
+			name: "updates existing node heartbeat",
+			node: &types.Node{
+				Name:          "node-1",
+				Status:        types.NodeStateReady,
+				LastHeartbeat: time.Now().Add(-time.Minute),
+			},
+			expectUpdate: true,
+		},
+		{
+			name:         "no-op if node doesn't exist",
+			node:         nil,
+			expectUpdate: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			podStore := store.NewMemStore[types.Pod]()
+			nodeStore := store.NewMemStore[types.Node]()
+			mockRT := &mockRuntime{}
+
+			if tt.node != nil {
+				nodeStore.Put(tt.node.Name, *tt.node)
+			}
+
+			beforeCall := time.Now()
+			kubelet := New(podStore, nodeStore, mockRT, "node-1")
+			kubelet.updateHeartbeat()
+
+			if tt.expectUpdate {
+				node, found := nodeStore.Get("node-1")
+				if !found {
+					t.Fatal("node not found after heartbeat update")
+				}
+				if !node.LastHeartbeat.After(beforeCall) {
+					t.Errorf("expected LastHeartbeat to be updated, got %v", node.LastHeartbeat)
 				}
 			}
 		})

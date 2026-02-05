@@ -49,7 +49,6 @@ Very nice!
 
 # TODOS
 
-- [ ] Mark nodes as `NotReady` if kubelet stops responding (will require healthchecks)
 - [ ] Round-robin for scheduler
 - [ ] Pod deletion cleanup (stop containers if the pods are deleted via API)
 - [ ] etcd (k/v store for cluster state so restarts persist)
@@ -69,6 +68,17 @@ TODO
 | Running    | running         | Nothing - we're converged                    |
 | Running    | exited          | Update pod to Failed                         |
 | Running    | doesn't exist   | Weird state - maybe re-create or mark Failed |
+
+```
+           (heartbeat)
+  Kubelet ─────────────>  NodeStore
+                              |
+                              V
+                          NodeController ("is heartbeat stale?")
+                              |
+                              V
+                          NotReady if stale
+```
 
 # Disclaimer
 
