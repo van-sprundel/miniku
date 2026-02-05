@@ -46,13 +46,7 @@ func (k *Kubelet) Sync() {
 	for _, container := range containers {
 		pod, exists := k.podStore.Get(container.Name)
 		if !exists {
-			log.Printf("sync: removing orphan container %s (%s)", container.Name, container.ID)
-			if err := k.runtime.Stop(container.ID); err != nil {
-				log.Printf("sync: failed to stop container %s: %v", container.ID, err)
-			}
-			if err := k.runtime.Remove(container.ID); err != nil {
-				log.Printf("sync: failed to remove container %s: %v", container.ID, err)
-			}
+			k.removeContainer(container.Name, container.ID)
 			continue
 		}
 
@@ -70,6 +64,32 @@ func (k *Kubelet) Sync() {
 	}
 }
 
+// cleanupOrphanedContainers stops and removes containers whose pods
+// no longer exist in the store (e.g. deleted via API or scaled down).
+func (k *Kubelet) cleanupOrphanedContainers() {
+	containers, err := k.runtime.List()
+	if err != nil {
+		log.Printf("kubelet: failed to list containers for cleanup: %v", err)
+		return
+	}
+
+	for _, container := range containers {
+		if _, exists := k.podStore.Get(container.Name); !exists {
+			k.removeContainer(container.Name, container.ID)
+		}
+	}
+}
+
+func (k *Kubelet) removeContainer(name string, id string) {
+	log.Printf("kubelet: removing orphan container %s (%s)", name, id)
+	if err := k.runtime.Stop(id); err != nil {
+		log.Printf("kubelet: failed to stop container %s: %v", id, err)
+	}
+	if err := k.runtime.Remove(id); err != nil {
+		log.Printf("kubelet: failed to remove container %s: %v", id, err)
+	}
+}
+
 func (k *Kubelet) Run() {
 	k.Sync()
 
@@ -83,6 +103,8 @@ func (k *Kubelet) Run() {
 				log.Printf("kubelet: failed to reconcile pod %s: %v", pod.Spec.Name, err)
 			}
 		}
+
+		k.cleanupOrphanedContainers()
 
 		// polling
 		k.updateHeartbeat()

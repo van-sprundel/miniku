@@ -49,7 +49,6 @@ Very nice!
 
 # TODOS
 
-- [ ] Pod deletion cleanup (stop containers if the pods are deleted via API)
 - [ ] etcd (k/v store for cluster state so restarts persist)
 
 # Core Spec
