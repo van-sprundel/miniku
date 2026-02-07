@@ -20,7 +20,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("failed to close database: %v", err)
+		}
+	}()
 
 	podStore := store.NewBoltStore[types.Pod](db, "pods")
 	rsStore := store.NewBoltStore[types.ReplicaSet](db, "replicasets")
