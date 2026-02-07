@@ -73,6 +73,9 @@ func (c *ReplicaSetController) reconcile(rs types.ReplicaSet) error {
 func (c *ReplicaSetController) getMatchingPods(rs types.ReplicaSet) []types.Pod {
 	var result []types.Pod
 	for _, pod := range c.podStore.List() {
+		if pod.Status == types.PodStatusFailed {
+			continue
+		}
 		if matchesSelector(pod, rs.Selector) {
 			result = append(result, pod)
 		}

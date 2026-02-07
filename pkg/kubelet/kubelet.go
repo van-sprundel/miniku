@@ -125,6 +125,11 @@ func (k *Kubelet) reconcilePod(pod types.Pod) error {
 		}
 	}
 
+	// terminal state, nothing to do
+	if podStatus == types.PodStatusFailed {
+		return nil
+	}
+
 	var updatedPod types.Pod
 	var err error
 	switch {
