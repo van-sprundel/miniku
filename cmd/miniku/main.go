@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 
+	bolt "go.etcd.io/bbolt"
+
 	"miniku/pkg/api"
 	"miniku/pkg/controller"
 	"miniku/pkg/kubelet"
@@ -14,9 +16,15 @@ import (
 )
 
 func main() {
-	podStore := store.NewMemStore[types.Pod]()
-	rsStore := store.NewMemStore[types.ReplicaSet]()
-	nodeStore := store.NewMemStore[types.Node]()
+	db, err := bolt.Open("miniku.db", 0600, nil)
+	if err != nil {
+		log.Fatalf("failed to open database: %v", err)
+	}
+	defer db.Close()
+
+	podStore := store.NewBoltStore[types.Pod](db, "pods")
+	rsStore := store.NewBoltStore[types.ReplicaSet](db, "replicasets")
+	nodeStore := store.NewBoltStore[types.Node](db, "nodes")
 
 	nodeStore.Put("node-1", types.Node{Name: "node-1", Status: types.NodeStateReady})
 	nodeStore.Put("node-2", types.Node{Name: "node-2", Status: types.NodeStateReady})
