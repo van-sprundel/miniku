@@ -1,11 +1,12 @@
 package scheduler
 
 import (
+	"cmp"
 	"errors"
 	"log"
 	"miniku/pkg/client"
 	"miniku/pkg/types"
-	"sort"
+	"slices"
 	"time"
 )
 
@@ -81,7 +82,7 @@ func (s *Scheduler) getAvailableNodes() []types.Node {
 		return nil
 	}
 
-	filteredNodes := []types.Node{}
+	filteredNodes := make([]types.Node, 0, len(nodes))
 	for _, v := range nodes {
 		if v.Status == types.NodeStateReady {
 			filteredNodes = append(filteredNodes, v)
@@ -89,8 +90,8 @@ func (s *Scheduler) getAvailableNodes() []types.Node {
 	}
 
 	// sort for deterministic round-robin
-	sort.Slice(filteredNodes, func(i, j int) bool {
-		return filteredNodes[i].Name < filteredNodes[j].Name
+	slices.SortFunc(filteredNodes, func(a, b types.Node) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	return filteredNodes

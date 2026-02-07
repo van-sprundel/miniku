@@ -84,7 +84,7 @@ func (c *ReplicaSetController) getMatchingPods(rs types.ReplicaSet) ([]types.Pod
 		return nil, err
 	}
 
-	var result []types.Pod
+	result := make([]types.Pod, 0, len(pods))
 	for _, pod := range pods {
 		if pod.Status == types.PodStatusFailed {
 			continue
