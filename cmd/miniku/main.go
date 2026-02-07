@@ -65,8 +65,11 @@ func main() {
 	sched := scheduler.New(c)
 	go sched.Run()
 
-	// reconcile pods -> containers (one per node)
-	rt := &runtime.DockerCLIRuntime{}
+	// reconcile pods -> containers
+	rt, err := runtime.NewNamespaceRuntime("/var/lib/miniku")
+	if err != nil {
+		log.Fatalf("failed to create runtime: %v", err)
+	}
 	kubelet1 := kubelet.New(c, rt, "node-1")
 	kubelet2 := kubelet.New(c, rt, "node-2")
 	go kubelet1.Run()
