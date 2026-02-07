@@ -189,6 +189,35 @@ func TestPickNode(t *testing.T) {
 	}
 }
 
+func TestPickNodeRoundRobin(t *testing.T) {
+	env := testutil.NewTestEnv()
+	defer env.Close()
+
+	env.NodeStore.Put("node-a", types.Node{Name: "node-a", Status: types.NodeStateReady})
+	env.NodeStore.Put("node-b", types.Node{Name: "node-b", Status: types.NodeStateReady})
+	env.NodeStore.Put("node-c", types.Node{Name: "node-c", Status: types.NodeStateReady})
+
+	sched := New(env.Client)
+
+	// pick 6 nodes, should round-robin through a, b, c twice
+	seen := make([]string, 6)
+	for i := range 6 {
+		node, ok := sched.pickNode()
+		if !ok {
+			t.Fatal("expected node to be picked")
+		}
+		seen[i] = node.Name
+	}
+
+	// sorted order: node-a, node-b, node-c
+	expected := []string{"node-a", "node-b", "node-c", "node-a", "node-b", "node-c"}
+	for i, name := range expected {
+		if seen[i] != name {
+			t.Errorf("pick %d: got %s, want %s", i, seen[i], name)
+		}
+	}
+}
+
 func TestSchedulerSkipsAlreadyScheduledPods(t *testing.T) {
 	env := testutil.NewTestEnv()
 	defer env.Close()

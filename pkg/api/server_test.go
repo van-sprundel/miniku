@@ -18,6 +18,32 @@ func newTestServer() (*Server, store.PodStore, store.ReplicaSetStore, store.Node
 	return srv, podStore, rsStore, nodeStore
 }
 
+func TestRoutes(t *testing.T) {
+	srv, podStore, _, _ := newTestServer()
+	podStore.Put("test", types.Pod{Spec: types.PodSpec{Name: "test", Image: "nginx"}})
+
+	ts := httptest.NewServer(srv.Routes())
+	defer ts.Close()
+
+	resp, err := http.Get(ts.URL + "/pods")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("GET /pods: got status %d, want 200", resp.StatusCode)
+	}
+
+	var pods []types.Pod
+	if err := json.NewDecoder(resp.Body).Decode(&pods); err != nil {
+		t.Fatal(err)
+	}
+	if len(pods) != 1 {
+		t.Errorf("got %d pods, want 1", len(pods))
+	}
+}
+
 func TestGetPod(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -429,6 +455,26 @@ func TestUpdateNode(t *testing.T) {
 	}
 	if node.Status != types.NodeStateNotReady {
 		t.Errorf("got status %q, want %q", node.Status, types.NodeStateNotReady)
+	}
+}
+
+func TestDeleteReplicaSet(t *testing.T) {
+	srv, _, rsStore, _ := newTestServer()
+	rsStore.Put("nginx-rs", types.ReplicaSet{Name: "nginx-rs", DesiredCount: 3})
+
+	req := httptest.NewRequest("DELETE", "/replicasets/nginx-rs", nil)
+	req.SetPathValue("name", "nginx-rs")
+	rec := httptest.NewRecorder()
+
+	srv.handleDeleteReplicaSet(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Errorf("got status %d, want 204", rec.Code)
+	}
+
+	_, ok := rsStore.Get("nginx-rs")
+	if ok {
+		t.Error("replicaset should have been deleted")
 	}
 }
 
