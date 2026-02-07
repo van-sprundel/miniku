@@ -5,36 +5,32 @@ I wanted to learn a bit more about distributed systems, and after reading more o
 ## Coverage
 
 <!-- coverage-start -->
-
-| Package          | Coverage  |
-| ---------------- | --------- |
-| `pkg/api`        | 69.4%     |
-| `pkg/client`     | 79.5%     |
-| `pkg/controller` | 60.3%     |
-| `pkg/kubelet`    | 60.8%     |
-| `pkg/scheduler`  | 60.5%     |
-| `pkg/store`      | 0.0%      |
-| **Total**        | **57.8%** |
-
+| Package | Coverage |
+|---------|----------|
+| `pkg/api` | 69.4% |
+| `pkg/client` | 79.5% |
+| `pkg/controller` | 60.3% |
+| `pkg/kubelet` | 60.8% |
+| `pkg/scheduler` | 60.5% |
+| `pkg/store` | 0.0% |
+| **Total** | **57.8%** |
 <!-- coverage-end -->
 
 ## Benchmarks
 
 <!-- bench-start -->
-
-| Benchmark                  |   ns/op |   B/op | allocs/op |
-| -------------------------- | ------: | -----: | --------: |
-| MatchesSelector            |   60.75 |      0 |         0 |
-| GetMatchingPods/pods=100   |  681912 | 201823 |      1370 |
-| Reconcile                  | 1251681 | 114296 |       929 |
-| PickNode/nodes=10          |   95392 |  13419 |       122 |
-| ScheduleOne                |  342145 |  30819 |       264 |
-| GetAvailableNodes/nodes=10 |   96968 |  12397 |       121 |
-| MemStorePut                |   629.8 |    178 |         2 |
-| MemStoreGet                |   91.47 |     13 |         1 |
-| MemStoreList/size=100      |    1375 |   2688 |         1 |
-| MemStoreDelete             |   206.9 |     27 |         3 |
-
+| Benchmark | ns/op | B/op | allocs/op |
+|-----------|------:|-----:|----------:|
+| MatchesSelector | 78.17 | 0 | 0 |
+| GetMatchingPods/pods=100 | 691654 | 194792 | 1368 |
+| Reconcile | 1320585 | 109215 | 932 |
+| PickNode/nodes=10 | 134001 | 13438 | 123 |
+| ScheduleOne | 393836 | 29453 | 265 |
+| GetAvailableNodes/nodes=10 | 133858 | 12414 | 122 |
+| MemStorePut | 511.1 | 191 | 2 |
+| MemStoreGet | 105.5 | 13 | 1 |
+| MemStoreList/size=100 | 1304 | 2688 | 1 |
+| MemStoreDelete | 244.0 | 27 | 3 |
 <!-- bench-end -->
 
 ## Architecture
