@@ -1,37 +1,8 @@
 # MiniKu (Mini Kubernetes)
 
+[![codecov](https://codecov.io/gh/van-sprundel/miniku/graph/badge.svg)](https://codecov.io/gh/van-sprundel/miniku)
+
 I wanted to learn a bit more about distributed systems, and after reading more of the [500 lines or less book](https://aosabook.org/en/500L/introduction.html), I wanted to have a crack at a mini version of K8S.
-
-## Coverage
-
-<!-- coverage-start -->
-| Package | Coverage |
-|---------|----------|
-| `pkg/api` | 88.0% |
-| `pkg/client` | 79.5% |
-| `pkg/controller` | 61.2% |
-| `pkg/kubelet` | 60.8% |
-| `pkg/scheduler` | 60.5% |
-| `pkg/store` | 87.7% |
-| **Total** | **74.4%** |
-<!-- coverage-end -->
-
-## Benchmarks
-
-<!-- bench-start -->
-| Benchmark | ns/op | B/op | allocs/op |
-|-----------|------:|-----:|----------:|
-| MatchesSelector | 80.07 | 0 | 0 |
-| GetMatchingPods/pods=100 | 703688 | 194621 | 1368 |
-| Reconcile | 1222810 | 96045 | 800 |
-| PickNode/nodes=10 | 141008 | 13436 | 123 |
-| ScheduleOne | 402503 | 29440 | 265 |
-| GetAvailableNodes/nodes=10 | 138747 | 12420 | 122 |
-| MemStorePut | 529.1 | 194 | 2 |
-| MemStoreGet | 112.1 | 13 | 1 |
-| MemStoreList/size=100 | 1380 | 2688 | 1 |
-| MemStoreDelete | 238.3 | 27 | 3 |
-<!-- bench-end -->
 
 ## Architecture
 

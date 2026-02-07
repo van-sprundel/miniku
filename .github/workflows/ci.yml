@@ -33,7 +33,6 @@ jobs:
       - uses: actions/setup-go@v6
       - name: Run coverage
         run: |
-          go test -cover ./pkg/api/... ./pkg/client/... ./pkg/scheduler/... ./pkg/controller/... ./pkg/kubelet/... ./pkg/store/... 2>&1 | tee coverage-summary.txt
           go test -coverprofile=coverage.out ./pkg/api/... ./pkg/client/... ./pkg/scheduler/... ./pkg/controller/... ./pkg/kubelet/... ./pkg/store/...
           go tool cover -func=coverage.out | tee coverage-func.txt
           TOTAL=$(grep ^total coverage-func.txt | awk '{print $3}')
@@ -41,13 +40,10 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           cat coverage-func.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-      - uses: actions/upload-artifact@v4
+      - uses: codecov/codecov-action@v5
         with:
-          name: coverage
-          path: |
-            coverage-summary.txt
-            coverage-func.txt
-
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage.out
   benchmark:
     name: run benchmarks
     runs-on: ubuntu-latest
@@ -68,25 +64,3 @@ jobs:
         with:
           name: benchmark
           path: bench.txt
-
-  update-readme:
-    needs: [lint, test, coverage, benchmark]
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-      - name: Update README
-        run: bash coverage.sh --from-artifacts artifacts
-      - name: Push changes
-        run: |
-          git diff --quiet README.md && exit 0
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add README.md
-          git commit -m "docs: update coverage and benchmark stats"
-          git push
