@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"miniku/pkg/store"
+	"miniku/pkg/testutil"
 	"miniku/pkg/types"
 	"testing"
 )
@@ -102,26 +102,29 @@ func TestReconcile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			podStore := store.NewMemStore[types.Pod]()
-			rsStore := store.NewMemStore[types.ReplicaSet]()
+			env := testutil.NewTestEnv()
+			defer env.Close()
 
 			for _, pod := range tt.existingPods {
-				podStore.Put(pod.Spec.Name, pod)
+				env.PodStore.Put(pod.Spec.Name, pod)
 			}
 
-			rsStore.Put(tt.replicaSet.Name, tt.replicaSet)
+			env.RSStore.Put(tt.replicaSet.Name, tt.replicaSet)
 
-			controller := New(podStore, rsStore)
-			_ = controller.reconcile(tt.replicaSet)
+			ctrl := New(env.Client)
+			_ = ctrl.reconcile(tt.replicaSet)
 
 			// count matching pods after recon.
-			matchingPods := controller.getMatchingPods(tt.replicaSet)
+			matchingPods, err := ctrl.getMatchingPods(tt.replicaSet)
+			if err != nil {
+				t.Fatalf("getMatchingPods: %v", err)
+			}
 			if len(matchingPods) != tt.expectedPodCount {
 				t.Errorf("expected %d matching pods, got %d", tt.expectedPodCount, len(matchingPods))
 			}
 
 			// verify currentcount was updated
-			updatedRS, _ := rsStore.Get(tt.replicaSet.Name)
+			updatedRS, _ := env.RSStore.Get(tt.replicaSet.Name)
 			if int(updatedRS.CurrentCount) != tt.expectedPodCount {
 				t.Errorf("expected CurrentCount %d, got %d", tt.expectedPodCount, updatedRS.CurrentCount)
 			}

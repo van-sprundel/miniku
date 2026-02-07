@@ -3,8 +3,8 @@ package kubelet
 import (
 	"fmt"
 	"log"
+	"miniku/pkg/client"
 	"miniku/pkg/runtime"
-	"miniku/pkg/store"
 	"miniku/pkg/types"
 	"time"
 )
@@ -16,17 +16,15 @@ const MAX_DELAY time.Duration = 60_000
 
 type Kubelet struct {
 	name         string
-	podStore     store.PodStore
-	nodeStore    store.NodeStore
+	client       *client.Client
 	runtime      runtime.Runtime
 	PollInterval time.Duration
 }
 
-func New(podStore store.PodStore, nodeStore store.NodeStore, runtime runtime.Runtime, name string) Kubelet {
+func New(client *client.Client, runtime runtime.Runtime, name string) Kubelet {
 	return Kubelet{
 		name:         name,
-		podStore:     podStore,
-		nodeStore:    nodeStore,
+		client:       client,
 		runtime:      runtime,
 		PollInterval: 5 * time.Second,
 	}
@@ -34,8 +32,6 @@ func New(podStore store.PodStore, nodeStore store.NodeStore, runtime runtime.Run
 
 // rediscover existing containers on startup and link them to pods.
 // orphaned containers (no matching pod) are stopped and removed.
-//
-// NOTE: this doesn't work right now because we're running the store in-memory so state will be lost
 func (k *Kubelet) Sync() {
 	containers, err := k.runtime.List()
 	if err != nil {
@@ -44,7 +40,11 @@ func (k *Kubelet) Sync() {
 	}
 
 	for _, container := range containers {
-		pod, exists := k.podStore.Get(container.Name)
+		pod, exists, err := k.client.GetPod(container.Name)
+		if err != nil {
+			log.Printf("sync: failed to get pod %s: %v", container.Name, err)
+			continue
+		}
 		if !exists {
 			k.removeContainer(container.Name, container.ID)
 			continue
@@ -59,7 +59,9 @@ func (k *Kubelet) Sync() {
 			log.Printf("sync: linking container %s to pod %s", container.ID, pod.Spec.Name)
 			pod.ContainerID = container.ID
 			pod.Status = types.PodStatusRunning
-			k.podStore.Put(pod.Spec.Name, pod)
+			if err := k.client.UpdatePod(pod.Spec.Name, pod); err != nil {
+				log.Printf("sync: failed to update pod %s: %v", pod.Spec.Name, err)
+			}
 		}
 	}
 }
@@ -74,7 +76,12 @@ func (k *Kubelet) cleanupOrphanedContainers() {
 	}
 
 	for _, container := range containers {
-		if _, exists := k.podStore.Get(container.Name); !exists {
+		_, exists, err := k.client.GetPod(container.Name)
+		if err != nil {
+			log.Printf("kubelet: failed to get pod %s: %v", container.Name, err)
+			continue
+		}
+		if !exists {
 			k.removeContainer(container.Name, container.ID)
 		}
 	}
@@ -94,7 +101,14 @@ func (k *Kubelet) Run() {
 	k.Sync()
 
 	for {
-		for _, pod := range k.podStore.List() {
+		pods, err := k.client.ListPods()
+		if err != nil {
+			log.Printf("kubelet: failed to list pods: %v", err)
+			time.Sleep(k.PollInterval)
+			continue
+		}
+
+		for _, pod := range pods {
 			// only reconcile pods assigned to this node
 			if pod.Spec.NodeName != k.name {
 				continue
@@ -164,8 +178,7 @@ func (k *Kubelet) reconcilePod(pod types.Pod) error {
 		return fmt.Errorf("unhandled state")
 	}
 
-	k.podStore.Put(updatedPod.Spec.Name, updatedPod)
-	return nil
+	return k.client.UpdatePod(updatedPod.Spec.Name, updatedPod)
 }
 
 // this function should backoff + retry when runtime.Run() fails.
@@ -210,9 +223,15 @@ func calculateNextRetry(pod types.Pod) time.Time {
 }
 
 func (k *Kubelet) updateHeartbeat() {
-	node, ok := k.nodeStore.Get(k.name)
+	node, ok, err := k.client.GetNode(k.name)
+	if err != nil {
+		log.Printf("kubelet: failed to get node %s: %v", k.name, err)
+		return
+	}
 	if ok {
 		node.LastHeartbeat = time.Now()
-		k.nodeStore.Put(k.name, node)
+		if err := k.client.UpdateNode(k.name, node); err != nil {
+			log.Printf("kubelet: failed to update node %s: %v", k.name, err)
+		}
 	}
 }

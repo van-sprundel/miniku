@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"miniku/pkg/store"
+	"miniku/pkg/testutil"
 	"miniku/pkg/types"
 	"testing"
 	"time"
@@ -70,13 +70,15 @@ func TestNodeControllerReconcile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			nodeStore := store.NewMemStore[types.Node]()
-			nodeStore.Put(tt.node.Name, tt.node)
+			env := testutil.NewTestEnv()
+			defer env.Close()
 
-			controller := NewNodeController(nodeStore)
-			controller.reconcile(tt.node)
+			env.NodeStore.Put(tt.node.Name, tt.node)
 
-			updatedNode, found := nodeStore.Get(tt.node.Name)
+			ctrl := NewNodeController(env.Client)
+			ctrl.reconcile(tt.node)
+
+			updatedNode, found := env.NodeStore.Get(tt.node.Name)
 			if !found {
 				t.Fatal("node not found in store")
 			}

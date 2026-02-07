@@ -2,11 +2,14 @@ package integration
 
 import (
 	"fmt"
+	"net/http/httptest"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"miniku/pkg/api"
+	"miniku/pkg/client"
 	"miniku/pkg/controller"
 	"miniku/pkg/kubelet"
 	"miniku/pkg/runtime"
@@ -97,13 +100,6 @@ func (r *mockRuntime) crashContainer(containerID string) {
 	}
 }
 
-// func (r *mockRuntime) removeContainer(containerID string) {
-// 	r.mu.Lock()
-// 	defer r.mu.Unlock()
-//
-// 	delete(r.containers, containerID)
-// }
-
 func (r *mockRuntime) containerCount() int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -115,6 +111,8 @@ type cluster struct {
 	rsStore   store.ReplicaSetStore
 	nodeStore store.NodeStore
 	rt        *mockRuntime
+	server    *httptest.Server
+	client    *client.Client
 }
 
 const testPollInterval = 50 * time.Millisecond
@@ -125,26 +123,30 @@ func newCluster() *cluster {
 	nodeStore := store.NewMemStore[types.Node]()
 	rt := newMockRuntime()
 
+	srv := &api.Server{PodStore: podStore, RSStore: rsStore, NodeStore: nodeStore}
+	ts := httptest.NewServer(srv.Routes())
+	c := client.New(ts.URL)
+
 	nodeStore.Put("node-1", types.Node{Name: "node-1", Status: types.NodeStateReady, LastHeartbeat: time.Now()})
 	nodeStore.Put("node-2", types.Node{Name: "node-2", Status: types.NodeStateReady, LastHeartbeat: time.Now()})
 
-	sched := scheduler.New(podStore, nodeStore)
+	sched := scheduler.New(c)
 	sched.PollInterval = testPollInterval
 	go sched.Run()
 
-	k1 := kubelet.New(podStore, nodeStore, rt, "node-1")
+	k1 := kubelet.New(c, rt, "node-1")
 	k1.PollInterval = testPollInterval
 	go k1.Run()
 
-	k2 := kubelet.New(podStore, nodeStore, rt, "node-2")
+	k2 := kubelet.New(c, rt, "node-2")
 	k2.PollInterval = testPollInterval
 	go k2.Run()
 
-	rsCtrl := controller.New(podStore, rsStore)
+	rsCtrl := controller.New(c)
 	rsCtrl.PollInterval = testPollInterval
 	go rsCtrl.Run()
 
-	nodeCtrl := controller.NewNodeController(nodeStore)
+	nodeCtrl := controller.NewNodeController(c)
 	nodeCtrl.PollInterval = testPollInterval
 	go nodeCtrl.Run()
 
@@ -153,6 +155,8 @@ func newCluster() *cluster {
 		rsStore:   rsStore,
 		nodeStore: nodeStore,
 		rt:        rt,
+		server:    ts,
+		client:    c,
 	}
 }
 
@@ -171,6 +175,7 @@ func waitFor(t *testing.T, timeout time.Duration, desc string, cond func() bool)
 
 func TestReplicaSetCreatesPods(t *testing.T) {
 	c := newCluster()
+	defer c.server.Close()
 
 	c.rsStore.Put("web", types.ReplicaSet{
 		Name:         "web",
@@ -205,6 +210,7 @@ func TestReplicaSetCreatesPods(t *testing.T) {
 
 func TestScaleUp(t *testing.T) {
 	c := newCluster()
+	defer c.server.Close()
 
 	c.rsStore.Put("web", types.ReplicaSet{
 		Name:         "web",
@@ -245,6 +251,7 @@ func TestScaleUp(t *testing.T) {
 
 func TestScaleDown(t *testing.T) {
 	c := newCluster()
+	defer c.server.Close()
 
 	c.rsStore.Put("web", types.ReplicaSet{
 		Name:         "web",
@@ -279,6 +286,7 @@ func TestScaleDown(t *testing.T) {
 
 func TestContainerCrashRecovery(t *testing.T) {
 	c := newCluster()
+	defer c.server.Close()
 
 	c.rsStore.Put("web", types.ReplicaSet{
 		Name:         "web",
@@ -316,6 +324,7 @@ func TestContainerCrashRecovery(t *testing.T) {
 
 func TestDeletePodCleansUpContainer(t *testing.T) {
 	c := newCluster()
+	defer c.server.Close()
 
 	// create a single pod directly (not via RS)
 	c.podStore.Put("solo", types.Pod{
@@ -343,6 +352,7 @@ func TestDeletePodCleansUpContainer(t *testing.T) {
 
 func TestMultipleReplicaSets(t *testing.T) {
 	c := newCluster()
+	defer c.server.Close()
 
 	c.rsStore.Put("web", types.ReplicaSet{
 		Name:         "web",
@@ -391,6 +401,7 @@ func TestMultipleReplicaSets(t *testing.T) {
 
 func TestDeleteReplicaSetCleansUpPods(t *testing.T) {
 	c := newCluster()
+	defer c.server.Close()
 
 	c.rsStore.Put("web", types.ReplicaSet{
 		Name:         "web",
