@@ -159,7 +159,7 @@ func (k *Kubelet) reconcilePod(pod types.Pod) error {
 		}
 
 	// pending and created but should be running
-	case podStatus == types.PodStatusPending && containerState.Status == types.ContainerStatusRunning:
+	case podStatus == types.PodStatusPending && containerState != nil && containerState.Status == types.ContainerStatusRunning:
 		updatedPod = k.updatePodStatus(pod, types.PodStatusRunning)
 
 	// happy flow, return
