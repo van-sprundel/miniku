@@ -33,12 +33,20 @@ jobs:
       - uses: actions/setup-go@v6
       - name: Run coverage
         run: |
+          go test -cover ./pkg/api/... ./pkg/client/... ./pkg/scheduler/... ./pkg/controller/... ./pkg/kubelet/... ./pkg/store/... 2>&1 | tee coverage-summary.txt
           go test -coverprofile=coverage.out ./pkg/api/... ./pkg/client/... ./pkg/scheduler/... ./pkg/controller/... ./pkg/kubelet/... ./pkg/store/...
-          TOTAL=$(go tool cover -func=coverage.out | grep ^total | awk '{print $3}')
+          go tool cover -func=coverage.out | tee coverage-func.txt
+          TOTAL=$(grep ^total coverage-func.txt | awk '{print $3}')
           echo "## Coverage: ${TOTAL}" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          go tool cover -func=coverage.out >> "$GITHUB_STEP_SUMMARY"
+          cat coverage-func.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: |
+            coverage-summary.txt
+            coverage-func.txt
 
   benchmark:
     name: run benchmarks
@@ -56,6 +64,10 @@ jobs:
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           grep -E "^(Benchmark|ok)" bench.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark
+          path: bench.txt
 
   update-readme:
     needs: [lint, test, coverage, benchmark]
@@ -65,9 +77,11 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
       - name: Update README
-        run: bash coverage.sh
+        run: bash coverage.sh --from-artifacts artifacts
       - name: Push changes
         run: |
           git diff --quiet README.md && exit 0

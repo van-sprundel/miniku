@@ -19,12 +19,26 @@ replace_section() {
     mv "$README.tmp" "$README"
 }
 
-# --- Coverage ---
+# --- Load data (from artifacts or by running tests) ---
 
-COV_RAW=$(go test -cover $PKGS 2>&1)
-TOTAL_LINE=$(go test -coverprofile=coverage.out $PKGS > /dev/null 2>&1 && go tool cover -func=coverage.out | grep ^total)
-TOTAL=$(echo "$TOTAL_LINE" | awk '{print $NF}')
+if [ "$1" = "--from-artifacts" ] && [ -d "$2" ]; then
+    ARTIFACTS="$2"
+    echo "Using pre-computed artifacts from $ARTIFACTS"
+    COV_RAW=$(cat "$ARTIFACTS/coverage/coverage-summary.txt")
+    TOTAL=$(grep ^total "$ARTIFACTS/coverage/coverage-func.txt" | awk '{print $NF}')
+    BENCH_RAW=$(cat "$ARTIFACTS/benchmark/bench.txt")
+else
+    echo "Running tests locally..."
+    COV_RAW=$(go test -cover $PKGS 2>&1)
+    TOTAL_LINE=$(go test -coverprofile=coverage.out $PKGS > /dev/null 2>&1 && go tool cover -func=coverage.out | grep ^total)
+    TOTAL=$(echo "$TOTAL_LINE" | awk '{print $NF}')
+    echo "Running benchmarks..."
+    BENCH_RAW=$(go test -run='^$' -bench=. -benchmem ./... 2>&1)
+fi
+
 echo "Coverage: $TOTAL"
+
+# --- Coverage ---
 
 COV_LINES="| Package | Coverage |
 |---------|----------|"
@@ -42,9 +56,6 @@ COV_LINES="$COV_LINES
 replace_section "coverage-start" "coverage-end" "$COV_LINES"
 
 # --- Benchmarks ---
-
-echo "Running benchmarks..."
-BENCH_RAW=$(go test -run='^$' -bench=. -benchmem ./... 2>&1)
 
 BENCH_LINES="| Benchmark | ns/op | B/op | allocs/op |
 |-----------|------:|-----:|----------:|"
