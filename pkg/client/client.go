@@ -105,7 +105,7 @@ func (c *Client) list(path string, out any) error {
 	if err != nil {
 		return fmt.Errorf("GET %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("GET %s: status %d", path, resp.StatusCode)
@@ -119,7 +119,7 @@ func (c *Client) get(path string, out any) (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("GET %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return false, nil
@@ -144,7 +144,7 @@ func (c *Client) create(path string, body any) error {
 	if err != nil {
 		return fmt.Errorf("POST %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("POST %s: status %d", path, resp.StatusCode)
@@ -168,7 +168,7 @@ func (c *Client) update(path string, body any) error {
 	if err != nil {
 		return fmt.Errorf("PUT %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("PUT %s: status %d", path, resp.StatusCode)
@@ -186,7 +186,7 @@ func (c *Client) delete(path string) error {
 	if err != nil {
 		return fmt.Errorf("DELETE %s: %w", path, err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusNoContent {
 		return fmt.Errorf("DELETE %s: status %d", path, resp.StatusCode)
