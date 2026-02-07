@@ -2,6 +2,30 @@
 
 I wanted to learn a bit more about distributed systems, and after reading more of the [500 lines or less book](https://aosabook.org/en/500L/introduction.html), I wanted to have a crack at a mini version of K8S.
 
+## Coverage
+
+<!-- run ./coverage.sh to update -->
+| Package | Coverage |
+|---------|----------|
+| `pkg/api` | 69.4% |
+| `pkg/client` | 78.3% |
+| `pkg/controller` | 60.3% |
+| `pkg/kubelet` | 60.8% |
+| `pkg/scheduler` | 60.5% |
+| **Total** | **57.3%** |
+
+## Architecture
+
+```
+  cmd/apiserver      cmd/scheduler      cmd/controller      cmd/kubelet
+  (stores live       (HTTP client)      (HTTP client)       (HTTP client +
+   here only)                                                Docker runtime)
+       |                  |                   |                   |
+       +------ HTTP ------+------- HTTP ------+------- HTTP ------+
+```
+
+All components communicate through the API server over HTTP. `cmd/miniku` runs everything in a single process for convenience.
+
 ## Starting a ReplicaSet (which in turn starts the desired pods)
 
 ```sh
@@ -49,7 +73,7 @@ Very nice!
 
 # TODOS
 
-- [ ] etcd (k/v store for cluster state so restarts persist)
+- [x] etcd (k/v store for cluster state so restarts persist) — implemented with BoltDB
 
 # Core Spec
 
