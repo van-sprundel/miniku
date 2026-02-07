@@ -12,28 +12,33 @@ import (
 	"crypto/rand"
 	"fmt"
 	"log"
-	"miniku/pkg/store"
+	"miniku/pkg/client"
 	"miniku/pkg/types"
 	"time"
 )
 
 type ReplicaSetController struct {
-	podStore     store.PodStore
-	rsStore      store.ReplicaSetStore
+	client       *client.Client
 	PollInterval time.Duration
 }
 
-func New(podStore store.PodStore, rsStore store.ReplicaSetStore) *ReplicaSetController {
+func New(client *client.Client) *ReplicaSetController {
 	return &ReplicaSetController{
-		podStore:     podStore,
-		rsStore:      rsStore,
+		client:       client,
 		PollInterval: 5 * time.Second,
 	}
 }
 
 func (c *ReplicaSetController) Run() {
 	for {
-		for _, rs := range c.rsStore.List() {
+		rsList, err := c.client.ListReplicaSets()
+		if err != nil {
+			log.Printf("controller: failed to list replicasets: %v", err)
+			time.Sleep(c.PollInterval)
+			continue
+		}
+
+		for _, rs := range rsList {
 			if err := c.reconcile(rs); err != nil {
 				log.Printf("controller: failed to reconcile %s: %v", rs.Name, err)
 			}
@@ -43,7 +48,10 @@ func (c *ReplicaSetController) Run() {
 	}
 }
 func (c *ReplicaSetController) reconcile(rs types.ReplicaSet) error {
-	matchingPods := c.getMatchingPods(rs)
+	matchingPods, err := c.getMatchingPods(rs)
+	if err != nil {
+		return err
+	}
 	current := uint(len(matchingPods))
 	desired := rs.DesiredCount
 
@@ -66,13 +74,21 @@ func (c *ReplicaSetController) reconcile(rs types.ReplicaSet) error {
 	}
 
 	// TODO while this is more robust than calculating (pods mightve silently failed), there's probably a more optimal way
-	rs.CurrentCount = uint(len(c.getMatchingPods(rs)))
-	c.rsStore.Put(rs.Name, rs)
-	return nil
+	updatedPods, err := c.getMatchingPods(rs)
+	if err != nil {
+		return err
+	}
+	rs.CurrentCount = uint(len(updatedPods))
+	return c.client.UpdateReplicaSet(rs.Name, rs)
 }
-func (c *ReplicaSetController) getMatchingPods(rs types.ReplicaSet) []types.Pod {
+func (c *ReplicaSetController) getMatchingPods(rs types.ReplicaSet) ([]types.Pod, error) {
+	pods, err := c.client.ListPods()
+	if err != nil {
+		return nil, err
+	}
+
 	var result []types.Pod
-	for _, pod := range c.podStore.List() {
+	for _, pod := range pods {
 		if pod.Status == types.PodStatusFailed {
 			continue
 		}
@@ -80,7 +96,7 @@ func (c *ReplicaSetController) getMatchingPods(rs types.ReplicaSet) []types.Pod 
 			result = append(result, pod)
 		}
 	}
-	return result
+	return result, nil
 }
 
 // a better alternative would be to use uuid's for this
@@ -103,12 +119,10 @@ func (c *ReplicaSetController) createPod(rs types.ReplicaSet) error {
 		},
 		Status: types.PodStatusPending,
 	}
-	c.podStore.Put(pod.Spec.Name, pod)
-	return nil
+	return c.client.CreatePod(pod)
 }
 func (c *ReplicaSetController) deletePod(pod types.Pod) error {
-	c.podStore.Delete(pod.Spec.Name)
-	return nil
+	return c.client.DeletePod(pod.Spec.Name)
 }
 
 func matchesSelector(pod types.Pod, selector map[string]string) bool {

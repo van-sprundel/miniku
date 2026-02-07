@@ -1,0 +1,27 @@
+version: "2"
+
+linters:
+  enable:
+    - dupl
+    - funlen
+    - cyclop
+    - gocognit
+  settings:
+    dupl:
+      threshold: 150
+    funlen:
+      lines: 80
+      statements: 50
+    cyclop:
+      max-complexity: 20
+    gocognit:
+      min-complexity: 20
+  exclusions:
+    paths:
+      - cmd
+    rules:
+      - path: _test\.go
+        linters:
+          - funlen
+          - gocognit
+          - dupl

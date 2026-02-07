@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"miniku/pkg/store"
+	"miniku/pkg/testutil"
 	"miniku/pkg/types"
 	"testing"
 )
@@ -14,17 +14,17 @@ func BenchmarkPickNode(b *testing.B) {
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("nodes=%d", size), func(b *testing.B) {
-			podStore := store.NewMemStore[types.Pod]()
-			nodeStore := store.NewMemStore[types.Node]()
+			env := testutil.NewTestEnv()
+			defer env.Close()
 
 			for i := range size {
-				nodeStore.Put(fmt.Sprintf("node-%d", i), types.Node{
+				env.NodeStore.Put(fmt.Sprintf("node-%d", i), types.Node{
 					Name:   fmt.Sprintf("node-%d", i),
 					Status: types.NodeStateReady,
 				})
 			}
 
-			sched := New(podStore, nodeStore)
+			sched := New(env.Client)
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
@@ -38,20 +38,20 @@ func BenchmarkScheduleOne(b *testing.B) {
 	log.SetOutput(io.Discard)
 	defer log.SetOutput(nil)
 
-	podStore := store.NewMemStore[types.Pod]()
-	nodeStore := store.NewMemStore[types.Node]()
+	env := testutil.NewTestEnv()
+	defer env.Close()
 
-	nodeStore.Put("node-1", types.Node{Name: "node-1", Status: types.NodeStateReady})
-	nodeStore.Put("node-2", types.Node{Name: "node-2", Status: types.NodeStateReady})
+	env.NodeStore.Put("node-1", types.Node{Name: "node-1", Status: types.NodeStateReady})
+	env.NodeStore.Put("node-2", types.Node{Name: "node-2", Status: types.NodeStateReady})
 
-	sched := New(podStore, nodeStore)
+	sched := New(env.Client)
 
 	for i := 0; b.Loop(); i++ {
 		pod := types.Pod{
 			Spec:   types.PodSpec{Name: fmt.Sprintf("pod-%d", i)},
 			Status: types.PodStatusPending,
 		}
-		podStore.Put(pod.Spec.Name, pod)
+		env.PodStore.Put(pod.Spec.Name, pod)
 		_ = sched.scheduleOne(pod)
 	}
 }
@@ -61,8 +61,8 @@ func BenchmarkGetAvailableNodes(b *testing.B) {
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("nodes=%d", size), func(b *testing.B) {
-			podStore := store.NewMemStore[types.Pod]()
-			nodeStore := store.NewMemStore[types.Node]()
+			env := testutil.NewTestEnv()
+			defer env.Close()
 
 			// half ready, half not ready
 			for i := range size {
@@ -70,13 +70,13 @@ func BenchmarkGetAvailableNodes(b *testing.B) {
 				if i%2 == 0 {
 					status = types.NodeStateNotReady
 				}
-				nodeStore.Put(fmt.Sprintf("node-%d", i), types.Node{
+				env.NodeStore.Put(fmt.Sprintf("node-%d", i), types.Node{
 					Name:   fmt.Sprintf("node-%d", i),
 					Status: status,
 				})
 			}
 
-			sched := New(podStore, nodeStore)
+			sched := New(env.Client)
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {

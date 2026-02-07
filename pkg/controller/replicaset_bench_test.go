@@ -2,7 +2,7 @@ package controller
 
 import (
 	"fmt"
-	"miniku/pkg/store"
+	"miniku/pkg/testutil"
 	"miniku/pkg/types"
 	"testing"
 )
@@ -35,8 +35,8 @@ func BenchmarkGetMatchingPods(b *testing.B) {
 
 	for _, size := range sizes {
 		b.Run(fmt.Sprintf("pods=%d", size), func(b *testing.B) {
-			podStore := store.NewMemStore[types.Pod]()
-			rsStore := store.NewMemStore[types.ReplicaSet]()
+			env := testutil.NewTestEnv()
+			defer env.Close()
 
 			// half match, half don't
 			for i := range size {
@@ -44,7 +44,7 @@ func BenchmarkGetMatchingPods(b *testing.B) {
 				if i%2 == 0 {
 					labels = map[string]string{"app": "nginx"}
 				}
-				podStore.Put(fmt.Sprintf("pod-%d", i), types.Pod{
+				env.PodStore.Put(fmt.Sprintf("pod-%d", i), types.Pod{
 					Spec: types.PodSpec{
 						Name:   fmt.Sprintf("pod-%d", i),
 						Image:  "nginx",
@@ -58,19 +58,19 @@ func BenchmarkGetMatchingPods(b *testing.B) {
 				Selector: map[string]string{"app": "nginx"},
 			}
 
-			controller := New(podStore, rsStore)
+			ctrl := New(env.Client)
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				controller.getMatchingPods(rs)
+				_, _ = ctrl.getMatchingPods(rs)
 			}
 		})
 	}
 }
 
 func BenchmarkReconcile(b *testing.B) {
-	podStore := store.NewMemStore[types.Pod]()
-	rsStore := store.NewMemStore[types.ReplicaSet]()
+	env := testutil.NewTestEnv()
+	defer env.Close()
 
 	rs := types.ReplicaSet{
 		Name:         "nginx-rs",
@@ -80,13 +80,14 @@ func BenchmarkReconcile(b *testing.B) {
 			Image: "nginx:latest",
 		},
 	}
+	env.RSStore.Put(rs.Name, rs)
 
-	controller := New(podStore, rsStore)
+	ctrl := New(env.Client)
 
 	for b.Loop() {
-		for _, pod := range podStore.List() {
-			podStore.Delete(pod.Spec.Name)
+		for _, pod := range env.PodStore.List() {
+			env.PodStore.Delete(pod.Spec.Name)
 		}
-		_ = controller.reconcile(rs)
+		_ = ctrl.reconcile(rs)
 	}
 }

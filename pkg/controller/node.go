@@ -1,7 +1,8 @@
 package controller
 
 import (
-	"miniku/pkg/store"
+	"log"
+	"miniku/pkg/client"
 	"miniku/pkg/types"
 	"time"
 )
@@ -9,20 +10,27 @@ import (
 const NODE_HEARTBEAT_THRESHOLD = 15 * time.Second
 
 type NodeController struct {
-	nodeStore    store.NodeStore
+	client       *client.Client
 	PollInterval time.Duration
 }
 
-func NewNodeController(nodeStore store.NodeStore) *NodeController {
+func NewNodeController(client *client.Client) *NodeController {
 	return &NodeController{
-		nodeStore:    nodeStore,
+		client:       client,
 		PollInterval: 5 * time.Second,
 	}
 }
 
 func (c *NodeController) Run() {
 	for {
-		for _, node := range c.nodeStore.List() {
+		nodes, err := c.client.ListNodes()
+		if err != nil {
+			log.Printf("node controller: failed to list nodes: %v", err)
+			time.Sleep(c.PollInterval)
+			continue
+		}
+
+		for _, node := range nodes {
 			c.reconcile(node)
 		}
 		time.Sleep(c.PollInterval)
@@ -35,5 +43,7 @@ func (c *NodeController) reconcile(node types.Node) {
 	} else {
 		node.Status = types.NodeStateReady
 	}
-	c.nodeStore.Put(node.Name, node)
+	if err := c.client.UpdateNode(node.Name, node); err != nil {
+		log.Printf("node controller: failed to update node %s: %v", node.Name, err)
+	}
 }

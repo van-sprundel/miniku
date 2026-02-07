@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"miniku/pkg/store"
+	"miniku/pkg/testutil"
 	"miniku/pkg/types"
 	"testing"
 )
@@ -61,18 +61,18 @@ func TestScheduleOne(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			podStore := store.NewMemStore[types.Pod]()
-			nodeStore := store.NewMemStore[types.Node]()
+			env := testutil.NewTestEnv()
+			defer env.Close()
 
-			podStore.Put(tt.pod.Spec.Name, tt.pod)
+			env.PodStore.Put(tt.pod.Spec.Name, tt.pod)
 			for _, node := range tt.nodes {
-				nodeStore.Put(node.Name, node)
+				env.NodeStore.Put(node.Name, node)
 			}
 
-			sched := New(podStore, nodeStore)
+			sched := New(env.Client)
 			err := sched.scheduleOne(tt.pod)
 
-			pod, _ := podStore.Get(tt.pod.Spec.Name)
+			pod, _ := env.PodStore.Get(tt.pod.Spec.Name)
 
 			if tt.expectAssigned {
 				if err != nil {
@@ -133,14 +133,14 @@ func TestGetAvailableNodes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			podStore := store.NewMemStore[types.Pod]()
-			nodeStore := store.NewMemStore[types.Node]()
+			env := testutil.NewTestEnv()
+			defer env.Close()
 
 			for _, node := range tt.nodes {
-				nodeStore.Put(node.Name, node)
+				env.NodeStore.Put(node.Name, node)
 			}
 
-			sched := New(podStore, nodeStore)
+			sched := New(env.Client)
 			available := sched.getAvailableNodes()
 
 			if len(available) != tt.expectedCount {
@@ -172,14 +172,14 @@ func TestPickNode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			podStore := store.NewMemStore[types.Pod]()
-			nodeStore := store.NewMemStore[types.Node]()
+			env := testutil.NewTestEnv()
+			defer env.Close()
 
 			for _, node := range tt.nodes {
-				nodeStore.Put(node.Name, node)
+				env.NodeStore.Put(node.Name, node)
 			}
 
-			sched := New(podStore, nodeStore)
+			sched := New(env.Client)
 			_, ok := sched.pickNode()
 
 			if ok != tt.expectOk {
@@ -190,22 +190,26 @@ func TestPickNode(t *testing.T) {
 }
 
 func TestSchedulerSkipsAlreadyScheduledPods(t *testing.T) {
-	podStore := store.NewMemStore[types.Pod]()
-	nodeStore := store.NewMemStore[types.Node]()
+	env := testutil.NewTestEnv()
+	defer env.Close()
 
 	// pod alr assigned to node-1
 	pod := types.Pod{
 		Spec:   types.PodSpec{Name: "test-pod", NodeName: "node-1"},
 		Status: types.PodStatusPending,
 	}
-	podStore.Put(pod.Spec.Name, pod)
+	env.PodStore.Put(pod.Spec.Name, pod)
 
-	nodeStore.Put("node-2", types.Node{Name: "node-2", Status: types.NodeStateReady})
+	env.NodeStore.Put("node-2", types.Node{Name: "node-2", Status: types.NodeStateReady})
 
-	sched := New(podStore, nodeStore)
+	sched := New(env.Client)
 
 	// manually call what `Run()` does for one iteration
-	for _, p := range podStore.List() {
+	pods, err := sched.client.ListPods()
+	if err != nil {
+		t.Fatalf("ListPods failed: %v", err)
+	}
+	for _, p := range pods {
 		if p.Spec.NodeName == "" {
 			if err := sched.scheduleOne(p); err != nil {
 				t.Fatalf("scheduleOne failed: %v", err)
@@ -214,7 +218,7 @@ func TestSchedulerSkipsAlreadyScheduledPods(t *testing.T) {
 	}
 
 	// pod should still be on node-1
-	result, _ := podStore.Get("test-pod")
+	result, _ := env.PodStore.Get("test-pod")
 	if result.Spec.NodeName != "node-1" {
 		t.Errorf("expected pod to stay on node-1, got %s", result.Spec.NodeName)
 	}

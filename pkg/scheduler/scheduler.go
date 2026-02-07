@@ -3,35 +3,40 @@ package scheduler
 import (
 	"errors"
 	"log"
-	"miniku/pkg/store"
+	"miniku/pkg/client"
 	"miniku/pkg/types"
+	"sort"
 	"time"
 )
 
 type Scheduler struct {
-	podStore     store.PodStore
-	nodeStore    store.NodeStore
+	client       *client.Client
 	nextIndex    uint
 	PollInterval time.Duration
 }
 
-func New(podStore store.PodStore, nodeStore store.NodeStore) *Scheduler {
+func New(client *client.Client) *Scheduler {
 	return &Scheduler{
-		podStore:     podStore,
-		nodeStore:    nodeStore,
+		client:       client,
 		PollInterval: 5 * time.Second,
 	}
 }
 
 func (s *Scheduler) Run() {
 	for {
-		for _, pod := range s.podStore.List() {
+		pods, err := s.client.ListPods()
+		if err != nil {
+			log.Printf("scheduler: failed to list pods: %v", err)
+			time.Sleep(s.PollInterval)
+			continue
+		}
+
+		for _, pod := range pods {
 			// pod is unscheduled
 			if pod.Spec.NodeName == "" {
 				err := s.scheduleOne(pod)
 				if err != nil {
 					log.Println(err)
-					//TODO what to do here?
 				}
 			}
 		}
@@ -49,7 +54,9 @@ func (s *Scheduler) scheduleOne(pod types.Pod) error {
 
 	log.Printf("scheduler: assigning pod %s to node %s", pod.Spec.Name, node.Name)
 	pod.Spec.NodeName = node.Name
-	s.podStore.Put(pod.Spec.Name, pod)
+	if err := s.client.UpdatePod(pod.Spec.Name, pod); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -68,13 +75,23 @@ func (s *Scheduler) pickNode() (types.Node, bool) {
 
 // filter Ready nodes
 func (s *Scheduler) getAvailableNodes() []types.Node {
-	filteredNodes := []types.Node{}
+	nodes, err := s.client.ListNodes()
+	if err != nil {
+		log.Printf("scheduler: failed to list nodes: %v", err)
+		return nil
+	}
 
-	for _, v := range s.nodeStore.List() {
+	filteredNodes := []types.Node{}
+	for _, v := range nodes {
 		if v.Status == types.NodeStateReady {
 			filteredNodes = append(filteredNodes, v)
 		}
 	}
+
+	// sort for deterministic round-robin
+	sort.Slice(filteredNodes, func(i, j int) bool {
+		return filteredNodes[i].Name < filteredNodes[j].Name
+	})
 
 	return filteredNodes
 }

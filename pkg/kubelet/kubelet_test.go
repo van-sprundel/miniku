@@ -3,7 +3,7 @@ package kubelet
 import (
 	"errors"
 	"miniku/pkg/runtime"
-	"miniku/pkg/store"
+	"miniku/pkg/testutil"
 	"miniku/pkg/types"
 	"slices"
 	"testing"
@@ -127,12 +127,13 @@ func TestCreateAndRun(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockRT := &mockRuntime{runFunc: tt.runFunc}
-			podStore := store.NewMemStore[types.Pod]()
-			nodeStore := store.NewMemStore[types.Node]()
-			kubelet := New(podStore, nodeStore, mockRT, "node-1")
+			env := testutil.NewTestEnv()
+			defer env.Close()
+
+			k := New(env.Client, mockRT, "node-1")
 
 			beforeCall := time.Now()
-			result, _ := kubelet.createAndRun(tt.pod)
+			result, _ := k.createAndRun(tt.pod)
 
 			if result.Status != tt.expectedStatus {
 				t.Errorf("expected status %s, got %s", tt.expectedStatus, result.Status)
@@ -255,17 +256,18 @@ func TestReconcilePod(t *testing.T) {
 					return tt.containerState, tt.getStatusErr
 				},
 			}
-			podStore := store.NewMemStore[types.Pod]()
-			podStore.Put(tt.pod.Spec.Name, tt.pod)
+			env := testutil.NewTestEnv()
+			defer env.Close()
 
-			nodeStore := store.NewMemStore[types.Node]()
-			kubelet := New(podStore, nodeStore, mockRT, "node-1")
+			env.PodStore.Put(tt.pod.Spec.Name, tt.pod)
 
-			if err := kubelet.reconcilePod(tt.pod); err != nil {
+			k := New(env.Client, mockRT, "node-1")
+
+			if err := k.reconcilePod(tt.pod); err != nil {
 				t.Fatalf("reconcilePod failed: %v", err)
 			}
 
-			storedPod, found := podStore.Get(tt.pod.Spec.Name)
+			storedPod, found := env.PodStore.Get(tt.pod.Spec.Name)
 
 			if tt.expectStoreUpdate {
 				if !found {
@@ -433,18 +435,18 @@ func TestSync(t *testing.T) {
 				},
 			}
 
-			podStore := store.NewMemStore[types.Pod]()
+			env := testutil.NewTestEnv()
+			defer env.Close()
+
 			for _, pod := range tt.existingPods {
-				podStore.Put(pod.Spec.Name, pod)
+				env.PodStore.Put(pod.Spec.Name, pod)
 			}
 
-			nodeStore := store.NewMemStore[types.Node]()
-
-			kubelet := New(podStore, nodeStore, mockRT, "node-1")
-			kubelet.Sync()
+			k := New(env.Client, mockRT, "node-1")
+			k.Sync()
 
 			for name, expectedPod := range tt.expectedPodState {
-				actualPod, found := podStore.Get(name)
+				actualPod, found := env.PodStore.Get(name)
 				if !found {
 					t.Errorf("expected pod %s to exist", name)
 					continue
@@ -504,20 +506,20 @@ func TestUpdateHeartbeat(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			podStore := store.NewMemStore[types.Pod]()
-			nodeStore := store.NewMemStore[types.Node]()
+			env := testutil.NewTestEnv()
+			defer env.Close()
 			mockRT := &mockRuntime{}
 
 			if tt.node != nil {
-				nodeStore.Put(tt.node.Name, *tt.node)
+				env.NodeStore.Put(tt.node.Name, *tt.node)
 			}
 
 			beforeCall := time.Now()
-			kubelet := New(podStore, nodeStore, mockRT, "node-1")
-			kubelet.updateHeartbeat()
+			k := New(env.Client, mockRT, "node-1")
+			k.updateHeartbeat()
 
 			if tt.expectUpdate {
-				node, found := nodeStore.Get("node-1")
+				node, found := env.NodeStore.Get("node-1")
 				if !found {
 					t.Fatal("node not found after heartbeat update")
 				}
