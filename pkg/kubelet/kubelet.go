@@ -9,10 +9,10 @@ import (
 	"time"
 )
 
-const MAX_RETRY_COUNT = 3
+const maxRetryCount = 3
 
-const BASE_DELAY time.Duration = 1000
-const MAX_DELAY time.Duration = 60_000
+const baseDelay = 1 * time.Second
+const maxDelay = 60 * time.Second
 
 type Kubelet struct {
 	name         string
@@ -186,7 +186,7 @@ func (k *Kubelet) createAndRun(pod types.Pod) (types.Pod, error) {
 
 	cID, err := k.runtime.Run(pod.Spec)
 	if err != nil {
-		if pod.RetryCount == MAX_RETRY_COUNT {
+		if pod.RetryCount == maxRetryCount {
 			pod.Status = types.PodStatusFailed
 			return pod, nil
 		}
@@ -218,7 +218,7 @@ func (k *Kubelet) handleMissingContainer(pod types.Pod) types.Pod {
 }
 
 func calculateNextRetry(pod types.Pod) time.Time {
-	delay := min(MAX_DELAY, BASE_DELAY*time.Duration(1<<pod.RetryCount))
+	delay := min(maxDelay, baseDelay*time.Duration(1<<pod.RetryCount))
 	return time.Now().Add(delay)
 }
 

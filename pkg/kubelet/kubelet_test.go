@@ -112,13 +112,13 @@ func TestCreateAndRun(t *testing.T) {
 			pod: types.Pod{
 				Spec:       types.PodSpec{Name: "test-pod", Image: "nginx"},
 				Status:     types.PodStatusPending,
-				RetryCount: MAX_RETRY_COUNT,
+				RetryCount: maxRetryCount,
 			},
 			runFunc: func(spec types.PodSpec) (string, error) {
 				return "", errors.New("container failed to start")
 			},
 			expectedStatus:      types.PodStatusFailed,
-			expectedRetry:       MAX_RETRY_COUNT,
+			expectedRetry:       maxRetryCount,
 			expectedContainerID: "",
 			expectNextRetrySet:  false,
 		},
