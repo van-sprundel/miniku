@@ -7,13 +7,13 @@ I wanted to learn a bit more about distributed systems, and after reading more o
 <!-- coverage-start -->
 | Package | Coverage |
 |---------|----------|
-| `pkg/api` | 69.4% |
+| `pkg/api` | 88.0% |
 | `pkg/client` | 79.5% |
 | `pkg/controller` | 61.2% |
 | `pkg/kubelet` | 60.8% |
 | `pkg/scheduler` | 60.5% |
 | `pkg/store` | 87.7% |
-| **Total** | **70.1%** |
+| **Total** | **74.4%** |
 <!-- coverage-end -->
 
 ## Benchmarks
@@ -21,16 +21,16 @@ I wanted to learn a bit more about distributed systems, and after reading more o
 <!-- bench-start -->
 | Benchmark | ns/op | B/op | allocs/op |
 |-----------|------:|-----:|----------:|
-| MatchesSelector | 77.61 | 0 | 0 |
-| GetMatchingPods/pods=100 | 701156 | 194629 | 1367 |
-| Reconcile | 1244402 | 96033 | 801 |
-| PickNode/nodes=10 | 145183 | 13438 | 123 |
-| ScheduleOne | 419156 | 29448 | 265 |
-| GetAvailableNodes/nodes=10 | 146229 | 12413 | 122 |
-| MemStorePut | 475.5 | 175 | 2 |
-| MemStoreGet | 108.7 | 13 | 1 |
-| MemStoreList/size=100 | 1358 | 2688 | 1 |
-| MemStoreDelete | 234.7 | 27 | 3 |
+| MatchesSelector | 77.65 | 0 | 0 |
+| GetMatchingPods/pods=100 | 705280 | 194626 | 1367 |
+| Reconcile | 1231754 | 95980 | 800 |
+| PickNode/nodes=10 | 144928 | 13441 | 123 |
+| ScheduleOne | 411754 | 29407 | 265 |
+| GetAvailableNodes/nodes=10 | 143687 | 12417 | 122 |
+| MemStorePut | 449.5 | 171 | 2 |
+| MemStoreGet | 108.4 | 13 | 1 |
+| MemStoreList/size=100 | 1335 | 2688 | 1 |
+| MemStoreDelete | 233.7 | 27 | 3 |
 <!-- bench-end -->
 
 ## Architecture
