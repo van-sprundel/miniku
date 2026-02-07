@@ -21,16 +21,16 @@ I wanted to learn a bit more about distributed systems, and after reading more o
 <!-- bench-start -->
 | Benchmark | ns/op | B/op | allocs/op |
 |-----------|------:|-----:|----------:|
-| MatchesSelector | 77.45 | 0 | 0 |
-| GetMatchingPods/pods=100 | 711622 | 194600 | 1368 |
-| Reconcile | 1256303 | 95974 | 800 |
-| PickNode/nodes=10 | 148954 | 13433 | 123 |
-| ScheduleOne | 415832 | 29454 | 265 |
-| GetAvailableNodes/nodes=10 | 146530 | 12412 | 122 |
-| MemStorePut | 486.7 | 182 | 2 |
-| MemStoreGet | 108.7 | 13 | 1 |
-| MemStoreList/size=100 | 1423 | 2688 | 1 |
-| MemStoreDelete | 236.9 | 27 | 3 |
+| MatchesSelector | 80.07 | 0 | 0 |
+| GetMatchingPods/pods=100 | 703688 | 194621 | 1368 |
+| Reconcile | 1222810 | 96045 | 800 |
+| PickNode/nodes=10 | 141008 | 13436 | 123 |
+| ScheduleOne | 402503 | 29440 | 265 |
+| GetAvailableNodes/nodes=10 | 138747 | 12420 | 122 |
+| MemStorePut | 529.1 | 194 | 2 |
+| MemStoreGet | 112.1 | 13 | 1 |
+| MemStoreList/size=100 | 1380 | 2688 | 1 |
+| MemStoreDelete | 238.3 | 27 | 3 |
 <!-- bench-end -->
 
 ## Architecture
