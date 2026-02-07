@@ -9,18 +9,17 @@ import (
 )
 
 type Scheduler struct {
-	podStore  store.PodStore
-	nodeStore store.NodeStore
-	nextIndex uint
+	podStore     store.PodStore
+	nodeStore    store.NodeStore
+	nextIndex    uint
+	PollInterval time.Duration
 }
-
-const POLL_INTERVAL = time.Millisecond * 5000
 
 func New(podStore store.PodStore, nodeStore store.NodeStore) *Scheduler {
 	return &Scheduler{
-		podStore,
-		nodeStore,
-		0,
+		podStore:     podStore,
+		nodeStore:    nodeStore,
+		PollInterval: 5 * time.Second,
 	}
 }
 
@@ -37,7 +36,7 @@ func (s *Scheduler) Run() {
 			}
 		}
 
-		time.Sleep(POLL_INTERVAL)
+		time.Sleep(s.PollInterval)
 	}
 }
 

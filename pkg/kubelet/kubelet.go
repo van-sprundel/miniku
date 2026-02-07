@@ -9,26 +9,26 @@ import (
 	"time"
 )
 
-const POLL_INTERVAL = time.Millisecond * 5000
-
 const MAX_RETRY_COUNT = 3
 
 const BASE_DELAY time.Duration = 1000
 const MAX_DELAY time.Duration = 60_000
 
 type Kubelet struct {
-	name      string
-	podStore  store.PodStore
-	nodeStore store.NodeStore
-	runtime   runtime.Runtime
+	name         string
+	podStore     store.PodStore
+	nodeStore    store.NodeStore
+	runtime      runtime.Runtime
+	PollInterval time.Duration
 }
 
 func New(podStore store.PodStore, nodeStore store.NodeStore, runtime runtime.Runtime, name string) Kubelet {
 	return Kubelet{
-		name,
-		podStore,
-		nodeStore,
-		runtime,
+		name:         name,
+		podStore:     podStore,
+		nodeStore:    nodeStore,
+		runtime:      runtime,
+		PollInterval: 5 * time.Second,
 	}
 }
 
@@ -108,7 +108,7 @@ func (k *Kubelet) Run() {
 
 		// polling
 		k.updateHeartbeat()
-		time.Sleep(POLL_INTERVAL)
+		time.Sleep(k.PollInterval)
 	}
 }
 
