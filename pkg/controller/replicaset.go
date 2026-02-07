@@ -17,17 +17,17 @@ import (
 	"time"
 )
 
-const POLL_INTERVAL = time.Millisecond * 5000
-
 type ReplicaSetController struct {
-	podStore store.PodStore
-	rsStore  store.ReplicaSetStore
+	podStore     store.PodStore
+	rsStore      store.ReplicaSetStore
+	PollInterval time.Duration
 }
 
 func New(podStore store.PodStore, rsStore store.ReplicaSetStore) *ReplicaSetController {
 	return &ReplicaSetController{
-		podStore,
-		rsStore,
+		podStore:     podStore,
+		rsStore:      rsStore,
+		PollInterval: 5 * time.Second,
 	}
 }
 
@@ -39,7 +39,7 @@ func (c *ReplicaSetController) Run() {
 			}
 		}
 
-		time.Sleep(POLL_INTERVAL)
+		time.Sleep(c.PollInterval)
 	}
 }
 func (c *ReplicaSetController) reconcile(rs types.ReplicaSet) error {
@@ -73,6 +73,9 @@ func (c *ReplicaSetController) reconcile(rs types.ReplicaSet) error {
 func (c *ReplicaSetController) getMatchingPods(rs types.ReplicaSet) []types.Pod {
 	var result []types.Pod
 	for _, pod := range c.podStore.List() {
+		if pod.Status == types.PodStatusFailed {
+			continue
+		}
 		if matchesSelector(pod, rs.Selector) {
 			result = append(result, pod)
 		}

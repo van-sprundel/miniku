@@ -9,11 +9,15 @@ import (
 const NODE_HEARTBEAT_THRESHOLD = 15 * time.Second
 
 type NodeController struct {
-	nodeStore store.NodeStore
+	nodeStore    store.NodeStore
+	PollInterval time.Duration
 }
 
 func NewNodeController(nodeStore store.NodeStore) *NodeController {
-	return &NodeController{nodeStore}
+	return &NodeController{
+		nodeStore:    nodeStore,
+		PollInterval: 5 * time.Second,
+	}
 }
 
 func (c *NodeController) Run() {
@@ -21,7 +25,7 @@ func (c *NodeController) Run() {
 		for _, node := range c.nodeStore.List() {
 			c.reconcile(node)
 		}
-		time.Sleep(POLL_INTERVAL)
+		time.Sleep(c.PollInterval)
 	}
 }
 
