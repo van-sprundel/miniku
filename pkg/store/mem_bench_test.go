@@ -5,11 +5,6 @@ import (
 	"testing"
 )
 
-type testItem struct {
-	Name  string
-	Value int
-}
-
 func BenchmarkMemStorePut(b *testing.B) {
 	store := NewMemStore[testItem]()
 	item := testItem{Name: "test", Value: 42}

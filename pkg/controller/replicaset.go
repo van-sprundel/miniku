@@ -62,6 +62,7 @@ func (c *ReplicaSetController) reconcile(rs types.ReplicaSet) error {
 				return err
 			}
 		}
+		current += diff
 	}
 
 	if current > desired {
@@ -71,14 +72,10 @@ func (c *ReplicaSetController) reconcile(rs types.ReplicaSet) error {
 				return err
 			}
 		}
+		current -= diff
 	}
 
-	// TODO while this is more robust than calculating (pods mightve silently failed), there's probably a more optimal way
-	updatedPods, err := c.getMatchingPods(rs)
-	if err != nil {
-		return err
-	}
-	rs.CurrentCount = uint(len(updatedPods))
+	rs.CurrentCount = current
 	return c.client.UpdateReplicaSet(rs.Name, rs)
 }
 func (c *ReplicaSetController) getMatchingPods(rs types.ReplicaSet) ([]types.Pod, error) {
