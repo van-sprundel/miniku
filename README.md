@@ -1,6 +1,6 @@
 # MiniKu (Mini Kubernetes)
 
-[![codecov](https://codecov.io/gh/van-sprundel/miniku/graph/badge.svg)](https://codecov.io/gh/van-sprundel/miniku)
+[![codecov](https://codecov.io/gh/van-sprundel/miniku/graph/badge.svg)](https://codecov.io/gh/van-sprundel/miniku) (nice)
 
 I wanted to learn a bit more about distributed systems, and after reading more of the [500 lines or less book](https://aosabook.org/en/500L/introduction.html), I wanted to have a crack at a mini version of K8S.
 
